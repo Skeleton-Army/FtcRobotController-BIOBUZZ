@@ -1,0 +1,80 @@
+apply plugin: 'com.android.application'
+
+//
+// build.gradle in TeamCode
+//
+// Most of the definitions for building your module reside in a common, shared
+// file 'build.common.gradle'. Being factored in this way makes it easier to
+// integrate updates to the FTC into your code. If you really need to customize
+// the build definitions, you can place those customizations in this file, but
+// please think carefully as to whether such customizations are really necessary
+// before doing so.
+
+// Custom definitions may go here
+
+// Include common definitions from above.
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url "https://repo.dairy.foundation/releases"
+        }
+    }
+    dependencies {
+        classpath "dev.frozenmilk:Load:0.3.2"
+    }
+}
+
+apply from: '../build.common.gradle'
+apply from: '../build.dependencies.gradle'
+apply plugin: 'dev.frozenmilk.sinister.sloth.load'
+
+android {
+    namespace = 'org.firstinspires.ftc.teamcode'
+
+    packagingOptions {
+        jniLibs.useLegacyPackaging true
+    }
+}
+
+repositories {
+    maven { url = "https://repo.dairy.foundation/releases" }
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':FtcRobotController')
+
+    implementation "org.solverslib:core:0.3.6"
+    implementation "org.solverslib:pedroPathing:0.3.6"
+
+    implementation "com.skeletonarmyftc.marrow:core:1.1.2"
+
+    implementation "com.pedropathing:revhub:3.0.0"
+    implementation "com.pedropathing:tuning:1.0.0"
+
+    implementation "dev.frozenmilk.sinister:Sloth:0.3.2"
+    implementation "com.acmerobotics.slothboard:dashboard:0.3.2+0.6.0"
+
+    implementation "page.j5155.AdvantageScope:lite:v26.0.0"
+
+    implementation "org.psilynx.psikit:core:0.2.0"
+    implementation "org.psilynx.psikit:ftc:0.2.0"
+}
+
+tasks.register('adbDisconnect', Exec) {
+    group = 'verification'
+    description = 'Disconnects all active wireless ADB connections'
+
+    def adbExe = android.getAdbExecutable().absolutePath;
+    commandLine adbExe, 'disconnect'
+
+    ignoreExitValue = true
+}
+
+afterEvaluate {
+    tasks.named('deploySloth').configure {
+        finalizedBy('adbDisconnect')
+    }
+}
