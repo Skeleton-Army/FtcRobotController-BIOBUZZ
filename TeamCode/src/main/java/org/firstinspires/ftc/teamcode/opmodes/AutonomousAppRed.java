@@ -28,8 +28,10 @@ public class AutonomousAppRed extends CommandOpMode {
 
     private Path scorePathClose;
     private Path collectPath;
+    private Path collectToScorePath;
     private Path parkPath;
     private Path scorePathFar;
+
     private final Pose startPose = new Pose(58.4795, 9.6037, Math.toRadians(90));
     private final Pose scorePoseClose = new Pose(6.5015, 105.8093, Math.toRadians(180));
     private final Pose scorePoseFar = new Pose(34.583, 119.1596, Math.toRadians(-31.0901));
@@ -37,15 +39,23 @@ public class AutonomousAppRed extends CommandOpMode {
     private final Pose parkPose = new Pose(7.1278, 96.4563, Math.toRadians(180));
     private final Pose farControlPoint1 = new Pose(5.0187, 41.4496, 0);
     private final Pose farControlPoint2 = new Pose(30.5131, 122.5821, 0);
+
     private Path getScorePathClose() {
         return line(startPose, scorePoseClose).linear(startPose, scorePoseClose);
     }
+
     private Path getScorePathFar() {
         return curve(startPose, farControlPoint1, farControlPoint2, scorePoseFar).linear(startPose, scorePoseFar);
     }
+
     private Path getCollectPath() {
         return line(scorePoseClose, collectPose).linear(scorePoseClose, collectPose);
     }
+
+    private Path getCollectToScorePath() {
+        return line(collectPose, scorePoseClose).linear(collectPose, scorePoseClose);
+    }
+
     private Path getParkPath() {
         return line(scorePoseClose, parkPose).linear(scorePoseClose, parkPose);
     }
@@ -57,25 +67,32 @@ public class AutonomousAppRed extends CommandOpMode {
 
         follower = Constants.create(hardwareMap);
         follower.setPose(startPose);
-            schedule(
-                    new SequentialCommandGroup(
-                            new FollowPathCommand(follower, scorePathClose),
-                            new InstantCommand(), // Shoot
-                            new WaitCommand(2000),
 
-                            new FollowPathCommand(follower, collectPath),
-                            new InstantCommand(), // turn on intake
-                            new WaitCommand(1000),
-                            new InstantCommand(), // turn off intake
-                            new FollowPathCommand(follower, scorePathClose),
-                            new InstantCommand(),// shoot
-                            new WaitCommand(1500),
-                            new FollowPathCommand(follower, parkPath)
-                    )
-            );
+        scorePathClose = getScorePathClose();
+        scorePathFar = getScorePathFar();
+        collectPath = getCollectPath();
+        collectToScorePath = getCollectToScorePath();
+        parkPath = getParkPath();
 
-        }
+        schedule(
+                new SequentialCommandGroup(
+                        new FollowPathCommand(follower, scorePathClose),
+                        new InstantCommand(), // Shoot
+                        new WaitCommand(2000),
 
+                        new FollowPathCommand(follower, collectPath),
+                        new InstantCommand(), // turn on intake
+                        new WaitCommand(1000),
+                        new InstantCommand(), // turn off intake
+
+                        new FollowPathCommand(follower, collectToScorePath),
+                        new InstantCommand(), // shoot
+                        new WaitCommand(1500),
+
+                        new FollowPathCommand(follower, parkPath)
+                )
+        );
+    }
         @Override
         public void run() {
             super.run();
