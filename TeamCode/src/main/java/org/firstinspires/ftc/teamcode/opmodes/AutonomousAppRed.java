@@ -1,12 +1,11 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
 
-import static com.pedropathing.api.Paths.curve;
-import static com.pedropathing.api.Paths.line;
-
+import static com.pedropathing.api.Paths.*;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+import com.pedropathing.api.PoseFactory;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 import com.pedropathing.paths.Path;
@@ -21,43 +20,33 @@ import com.skeletonarmy.marrow.LynxUtil;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-
-@Autonomous(name="Autonomous", preselectTeleOp="TeleOp")
+@Autonomous(name="AutonomousRed", preselectTeleOp="TeleOp")
 public class AutonomousAppRed extends CommandOpMode {
     private Follower follower;
 
     private Path scorePathClose;
     private Path collectPath;
-    private Path collectToScorePath;
-    private Path parkPath;
     private Path scorePathFar;
+    private Path parkPath;
 
     private final Pose startPose = new Pose(58.4795, 9.6037, Math.toRadians(90));
-    private final Pose scorePoseClose = new Pose(6.5015, 105.8093, Math.toRadians(180));
+    private final Pose scorePoseClose = new Pose(58.244, 45.2417, Math.toRadians(90.3786));
     private final Pose scorePoseFar = new Pose(34.583, 119.1596, Math.toRadians(-31.0901));
-    private final Pose collectPose = new Pose(10.1974, 8.1321, Math.toRadians(180));
-    private final Pose parkPose = new Pose(7.1278, 96.4563, Math.toRadians(180));
-    private final Pose farControlPoint1 = new Pose(5.0187, 41.4496, 0);
-    private final Pose farControlPoint2 = new Pose(30.5131, 122.5821, 0);
-
+    private final Pose collectPose = new Pose(9.6694, 6.5481, Math.toRadians(45));
+    private final Pose parkPose = new Pose(6.0718, 97.5123, Math.toRadians(120.8018));
+    private final Pose farControlPoint1 = new Pose(5.0187, 41.4496, Math.toRadians(0));
+    private final Pose farControlPoint2 = new Pose(30.5131, 122.5821, Math.toRadians(0));
     private Path getScorePathClose() {
         return line(startPose, scorePoseClose).linear(startPose, scorePoseClose);
     }
-
-    private Path getScorePathFar() {
-        return curve(startPose, farControlPoint1, farControlPoint2, scorePoseFar).linear(startPose, scorePoseFar);
-    }
-
     private Path getCollectPath() {
         return line(scorePoseClose, collectPose).linear(scorePoseClose, collectPose);
     }
-
-    private Path getCollectToScorePath() {
-        return line(collectPose, scorePoseClose).linear(collectPose, scorePoseClose);
+    private Path getScorePathFar() {
+        return curve(collectPose, farControlPoint1, farControlPoint2, scorePoseFar).linear(collectPose, scorePoseFar);
     }
-
     private Path getParkPath() {
-        return line(scorePoseClose, parkPose).linear(scorePoseClose, parkPose);
+        return line(scorePoseFar, parkPose).linear(scorePoseFar, parkPose);
     }
 
     @Override
@@ -69,11 +58,9 @@ public class AutonomousAppRed extends CommandOpMode {
         follower.setPose(startPose);
 
         scorePathClose = getScorePathClose();
-        scorePathFar = getScorePathFar();
         collectPath = getCollectPath();
-        collectToScorePath = getCollectToScorePath();
+        scorePathFar = getScorePathFar();
         parkPath = getParkPath();
-
         schedule(
                 new SequentialCommandGroup(
                         new FollowPathCommand(follower, scorePathClose),
@@ -85,7 +72,7 @@ public class AutonomousAppRed extends CommandOpMode {
                         new WaitCommand(1000),
                         new InstantCommand(), // turn off intake
 
-                        new FollowPathCommand(follower, collectToScorePath),
+                        new FollowPathCommand(follower, scorePathFar),
                         new InstantCommand(), // shoot
                         new WaitCommand(1500),
 
