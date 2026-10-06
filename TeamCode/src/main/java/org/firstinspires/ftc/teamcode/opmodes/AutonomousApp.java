@@ -5,7 +5,6 @@ import static com.pedropathing.api.Paths.*;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
-import com.pedropathing.api.PoseFactory;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 import com.pedropathing.paths.Path;
@@ -17,13 +16,16 @@ import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.WaitCommand;
 import com.seattlesolvers.solverslib.pedroCommand.FollowPathCommand;
 import com.skeletonarmy.marrow.LynxUtil;
+import com.skeletonarmy.marrow.prompts.OptionPrompt;
+import com.skeletonarmy.marrow.prompts.Prompter;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name="AutonomousRed", preselectTeleOp="TeleOp")
-public class AutonomousAppRed extends CommandOpMode {
+@Autonomous(name="Autonomous", preselectTeleOp="TeleOp")
+public class AutonomousApp extends CommandOpMode {
+    private final Prompter prompter = new Prompter(this);
+    private int alliance;
     private Follower follower;
-
     private Path scorePathClose;
     private Path collectPath;
     private Path scorePathFar;
@@ -36,31 +38,67 @@ public class AutonomousAppRed extends CommandOpMode {
     private final Pose parkPose = new Pose(6.0718, 97.5123, Math.toRadians(120.8018));
     private final Pose farControlPoint1 = new Pose(5.0187, 41.4496, Math.toRadians(0));
     private final Pose farControlPoint2 = new Pose(30.5131, 122.5821, Math.toRadians(0));
-    private Path getScorePathClose() {
-        return line(startPose, scorePoseClose).linear(startPose, scorePoseClose);
+
+    public static Pose mirrorPose(Pose pose) {
+        double newX = 144 - pose.x();
+        double newY = 144 -pose.y();
+        double newHeading = Math.toRadians(180) - pose.heading();
+
+        return new Pose(newX, newY, newHeading);
     }
-    private Path getCollectPath() {
-        return line(scorePoseClose, collectPose).linear(scorePoseClose, collectPose);
+
+    public static Pose changeAlliance(Pose pose, int alliance) {
+        if (alliance == 2) {
+            pose = mirrorPose(pose);
+        }
+
+        return pose;
     }
-    private Path getScorePathFar() {
-        return curve(collectPose, farControlPoint1, farControlPoint2, scorePoseFar).linear(collectPose, scorePoseFar);
+    private Path getScorePathClose(int alliance) {
+        return line(
+                changeAlliance(startPose, alliance),
+                changeAlliance(scorePoseClose, alliance)
+        );
     }
-    private Path getParkPath() {
-        return line(scorePoseFar, parkPose).linear(scorePoseFar, parkPose);
+
+    private Path getCollectPath(int alliance) {
+        return line(
+                changeAlliance(scorePoseClose, alliance),
+                changeAlliance(collectPose, alliance)
+        );
+    }
+
+    private Path getScorePathFar(int alliance) {
+        return curve(
+                changeAlliance(collectPose, alliance),
+                changeAlliance(farControlPoint1, alliance),
+                changeAlliance(farControlPoint2, alliance),
+                changeAlliance(scorePoseFar, alliance)
+        );
+    }
+
+    private Path getParkPath(int alliance) {
+        return line(
+                changeAlliance(scorePoseFar, alliance),
+                changeAlliance(parkPose, alliance)
+        );
     }
 
     @Override
     public void initialize() {
+        prompter.prompt("alliance", new OptionPrompt<>("SELECT ALLIANCE", 1, 2));
+        alliance = prompter.get("alliance");
+
         LynxUtil.setBulkCachingMode(hardwareMap, LynxModule.BulkCachingMode.MANUAL);
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
 
         follower = Constants.create(hardwareMap);
         follower.setPose(startPose);
 
-        scorePathClose = getScorePathClose();
-        collectPath = getCollectPath();
-        scorePathFar = getScorePathFar();
-        parkPath = getParkPath();
+        scorePathClose = getScorePathClose(alliance);
+        collectPath = getCollectPath(alliance);
+        scorePathFar = getScorePathFar(alliance);
+        parkPath = getParkPath(alliance);
         schedule(
                 new SequentialCommandGroup(
                         new FollowPathCommand(follower, scorePathClose),
