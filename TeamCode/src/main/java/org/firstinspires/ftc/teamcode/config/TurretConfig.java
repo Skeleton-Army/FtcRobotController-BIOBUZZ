@@ -14,6 +14,18 @@ public class TurretConfig {
     public static double TURRET_KP = 0;
     public static double TURRET_KI = 0;
     public static double TURRET_KD = 0;
+    public static double TURRET_KV = 0;
+    public static double TURRET_KA = 0;
+    public static double TURRET_KS = 0;
+    public static double TURRET_DERIVATIVE_GAIN = 0;
+    public static double TURRET_SECOND_DERIVATIVE_GAIN = 0;
+    public static final double MIN_FLYWHEEL_RPM = 0;
+    public static double TURRET_IZONE = Math.toRadians(30);
+    public static double TURRET_MIN_VOLTAGE = 0.2;
+    public static final double MIN_UPDATE_DT = 0.005;
+    public static final double STARTUP_SETTLE_TIME = 0.5;
+    public static final double MAX_TARGET_VEL = 4;
+    public static final double MAX_TARGET_ACCEL = 4;
 
     // --- Range / wrapping ---
     public static double TURRET_MIN = -Math.PI;
