@@ -11,15 +11,12 @@ import com.seattlesolvers.solverslib.hardware.servos.ServoEx;
 public class Hood extends SubsystemBase {
     private final ServoEx hood;
 
-    private boolean verticalManualMode;
-    private double verticalOffset = 0;
-
     public Hood(final HardwareMap hardwareMap) {
         hood = new ServoEx(hardwareMap, HOOD_NAME);
     }
 
     public void setHoodPosition(double angle) {
-        hood.set(clamp(angle, HOOD_POSSIBLE_MIN, HOOD_POSSIBLE_MAX));
+        hood.set(MathUtils.clamp(angle, HOOD_POSSIBLE_MIN, HOOD_POSSIBLE_MAX));
     }
 
     public double getRawHoodPosition() {
@@ -72,25 +69,5 @@ public class Hood extends SubsystemBase {
         setHoodPosition(targetPos);
     }
 
-    public void setVerticalManualMode(boolean enabled) {
-        verticalManualMode = enabled;
-    }
 
-    public boolean getVerticalManualMode() {
-        return verticalManualMode;
-    }
-
-    public void setVerticalOffset(double offset) {
-        verticalOffset = offset;
-    }
-
-    public double getVerticalOffset() {
-        return verticalOffset;
-    }
-
-    public static double clamp(double num, double lower, double upper) {
-        if (num < lower) return lower;
-        if (num > upper) return upper;
-        return num;
-    }
 }

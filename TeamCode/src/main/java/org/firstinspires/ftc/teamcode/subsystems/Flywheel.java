@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.firstinspires.ftc.teamcode.config.FlywheelConfig.*;
+import static org.firstinspires.ftc.teamcode.utils.MathUtilities.lowPassFilter;
 
 import androidx.core.math.MathUtils;
 
@@ -37,13 +38,9 @@ public class Flywheel extends SubsystemBase {
     private int bufferIndex = 0;
     private double runningRpmSum = 0;
     public double filteredRPM;
-
     private double lastFilteredRPM = 0;
     private long lastFilteredRPMTime = 0;
     private double filteredRPMAccel = 0; // RPM/s, derived from filteredRPM
-
-    private double lastShotRPM;
-
     public boolean disabled = false;
     private boolean emergencyStop = false;
 
@@ -63,7 +60,6 @@ public class Flywheel extends SubsystemBase {
         flywheel.setFeedforwardCoefficients(FLYWHEEL_KS, FLYWHEEL_KV, FLYWHEEL_KA);
         flywheel.setRunMode(MotorEx.RunMode.RawPower);
 
-
         flywheelPID = new PIDController(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
 
         rampTimer = new TimerEx(TimeUnit.SECONDS);
@@ -79,7 +75,7 @@ public class Flywheel extends SubsystemBase {
             this.voltage = voltageSensor.getVoltage();
         }
 
-        filteredRPM = getFilteredRPM(getRPM());
+        filteredRPM = getRPM(getRPM());
         updateFilteredRPMAccel();
 
         if (isFlywheelDamaged() && !emergencyStop) {
@@ -91,6 +87,98 @@ public class Flywheel extends SubsystemBase {
         updateFlywheelPIDFiltered();
 
         voltageExternallySupplied = false;
+    }
+
+    public boolean isFlywheelDamaged() {
+        double currentRPM = Math.abs(getRPM());
+        double targetRPM = Math.abs(getTargetRPM());
+
+        // 1. Encoder Direction Check
+        if ((getRPM() < -500 && targetRPM > 0) || (getRPM() > 500 && targetRPM < 0)) {
+            RobotLog.addGlobalWarningMessage("FLYWHEEL IS SPINNING IN THE WRONG DIRECTION.");
+            return true;
+        }
+
+        // 2. Conflict/Stall Check
+        boolean isStalling = targetRPM > 1000 && currentRPM < 200;
+
+        if (isStalling) {
+            stallTimer.start();
+            stallTimer.resume();
+
+            if (stallTimer.getElapsed() > STALL_TIMEOUT) {
+                RobotLog.addGlobalWarningMessage("FLYWHEEL STALL DETECTED. ONE OF THE FLYWHEEL MOTORS IS PROBABLY REVERSED.");
+                return true;
+            }
+        } else {
+            stallTimer.restart();
+            stallTimer.pause();
+        }
+
+        return false;
+    }
+
+    public double getRPM() {
+        double motorTPS = flywheel.getVelocity();
+        return (motorTPS * 60.0) / flywheel.getCPR();
+    }
+
+    public double getFilteredRPMAccel() {
+        return filteredRPMAccel;
+    }
+
+    public double getTargetRPM() {
+        return (targetTPS * 60.0) / flywheel.getCPR();
+    }
+
+    public void setRPM(double rpm) {
+        rpm = MathUtils.clamp(rpm, 0, flywheel.getMaxRPM());
+        this.targetTPS = (rpm * flywheel.getCPR()) / 60.0;
+    }
+
+    public void updateVoltage(double voltage) {
+        this.voltage = voltage;
+        voltageExternallySupplied = true;
+    }
+
+    public void disable() {
+        disabled = true;
+        flywheel.stopMotor();
+    }
+
+    public void enable() {
+        disabled = false;
+    }
+
+    private double getRPM(double currentRPM) {
+        runningRpmSum -= rpmBuffer[bufferIndex];
+        rpmBuffer[bufferIndex] = currentRPM;
+        runningRpmSum += currentRPM;
+        bufferIndex = (bufferIndex + 1) % RPM_WINDOW_SIZE;
+        return runningRpmSum / RPM_WINDOW_SIZE;
+    }
+
+    /**
+     * Derives flywheel angular acceleration from the already-averaged filteredRPM signal.
+     * Since filteredRPM is a moving average, its derivative is far less noisy than
+     * differentiating the raw encoder velocity directly.
+     */
+    private void updateFilteredRPMAccel() {
+        long currentTime = System.nanoTime();
+
+        if (lastFilteredRPMTime == 0) {
+            lastFilteredRPMTime = currentTime;
+            lastFilteredRPM = filteredRPM;
+        }
+
+        double dt = (currentTime - lastFilteredRPMTime) / 1e9;
+        if (dt < 0.001) dt = 0.001;
+
+        double rawAccel = (filteredRPM - lastFilteredRPM) / dt; // RPM/s
+        filteredRPMAccel = lowPassFilter(rawAccel, filteredRPMAccel, FLYWHEEL_ACCEL_FILTER_ALPHA);
+
+        lastFilteredRPM = filteredRPM;
+        lastFilteredRPMTime = currentTime;
     }
 
     private void updateFlywheelPIDFiltered() {
@@ -154,121 +242,4 @@ public class Flywheel extends SubsystemBase {
         flywheel.set(desiredVoltage / voltage);
     }
 
-    public boolean isFlywheelDamaged() {
-        double currentRPM = Math.abs(getRPM());
-        double targetRPM = Math.abs(getTargetRPM());
-
-        // 1. Encoder Direction Check
-        if ((getRPM() < -500 && targetRPM > 0) || (getRPM() > 500 && targetRPM < 0)) {
-            RobotLog.addGlobalWarningMessage("FLYWHEEL IS SPINNING IN THE WRONG DIRECTION.");
-            return true;
-        }
-
-        // 2. Conflict/Stall Check
-        boolean isStalling = targetRPM > 1000 && currentRPM < 200;
-
-        if (isStalling) {
-            stallTimer.start();
-            stallTimer.resume();
-
-            if (stallTimer.getElapsed() > STALL_TIMEOUT) {
-                RobotLog.addGlobalWarningMessage("FLYWHEEL STALL DETECTED. ONE OF THE FLYWHEEL MOTORS IS PROBABLY REVERSED.");
-                return true;
-            }
-        } else {
-            stallTimer.restart();
-            stallTimer.pause();
-        }
-
-        return false;
-    }
-
-    public double getRPM() {
-        double motorTPS = flywheel.getVelocity();
-        return (motorTPS * 60.0) / flywheel.getCPR();
-    }
-
-    /**
-     * Derives flywheel angular acceleration from the already-averaged filteredRPM signal.
-     * Since filteredRPM is a moving average, its derivative is far less noisy than
-     * differentiating the raw encoder velocity directly.
-     */
-    private double updateFilteredRPMAccel() {
-        long currentTime = System.nanoTime();
-
-        if (lastFilteredRPMTime == 0) {
-            lastFilteredRPMTime = currentTime;
-            lastFilteredRPM = filteredRPM;
-            return 0;
-        }
-
-        double dt = (currentTime - lastFilteredRPMTime) / 1e9;
-        if (dt < 0.001) dt = 0.001;
-
-        double rawAccel = (filteredRPM - lastFilteredRPM) / dt; // RPM/s
-        filteredRPMAccel = lowPassFilter(rawAccel, filteredRPMAccel, FLYWHEEL_ACCEL_FILTER_ALPHA);
-
-        lastFilteredRPM = filteredRPM;
-        lastFilteredRPMTime = currentTime;
-
-        return filteredRPMAccel;
-    }
-
-    public double getFilteredRPMAccel() {
-        return filteredRPMAccel;
-    }
-
-    public double getRPMCorrectedTiming() {
-        double motorTPS = flywheel.getVelocity();
-        if (!Double.isNaN(flywheel1.getAcceleration())) {
-            motorTPS += flywheel1.getAcceleration() * FLYWHEEL_SHOOTING_DIFFERENCE;
-            return (motorTPS * 60.0) / flywheel.getCPR();
-        }
-
-        return (motorTPS * 60.0) / flywheel.getCPR();
-    }
-
-    public double getTargetRPM() {
-        return (targetTPS * 60.0) / flywheel.getCPR();
-    }
-
-    private double getFilteredRPM(double currentRPM) {
-        runningRpmSum -= rpmBuffer[bufferIndex];
-        rpmBuffer[bufferIndex] = currentRPM;
-        runningRpmSum += currentRPM;
-        bufferIndex = (bufferIndex + 1) % RPM_WINDOW_SIZE;
-        return runningRpmSum / RPM_WINDOW_SIZE;
-    }
-
-    public void setRPM(double rpm) {
-        rpm = MathUtils.clamp(rpm, 0, flywheel.getMaxRPM());
-        this.targetTPS = (rpm * flywheel.getCPR()) / 60.0;
-    }
-
-    public void updateVoltage(double voltage) {
-        this.voltage = voltage;
-        voltageExternallySupplied = true;
-    }
-
-    public boolean justShot() {
-        if ((Math.abs(getTargetRPM() - getRPM()) > RPM_REACHED_THRESHOLD) && (Math.abs(lastShotRPM - getRPM()) > RPM_REACHED_THRESHOLD)) {
-            return true;
-        }
-
-        lastShotRPM = getRPM();
-        return false;
-    }
-
-    public void disable() {
-        disabled = true;
-        flywheel.stopMotor();
-    }
-
-    public void enable() {
-        disabled = false;
-    }
-
-    private static double lowPassFilter(double newVal, double oldVal, double gain) {
-        return (gain * newVal) + ((1.0 - gain) * oldVal);
-    }
 }
