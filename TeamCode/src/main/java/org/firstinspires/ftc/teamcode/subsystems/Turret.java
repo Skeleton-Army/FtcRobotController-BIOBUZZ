@@ -53,7 +53,13 @@ public class Turret extends SubsystemBase {
             turret.set(0);
             return;
         }
+
         updateTurretPID();
+    }
+    public void updateVoltage(double voltage) {
+        if (voltage > 0) {
+            this.voltage = voltage;
+        }
     }
 
     public void setHorizontalAngle(double targetAngleRad) {

@@ -75,7 +75,7 @@ public class Flywheel extends SubsystemBase {
             this.voltage = voltageSensor.getVoltage();
         }
 
-        filteredRPM = getRPM(getRPM());
+        filteredRPM = getFilteredRpm(getRPM());
         updateFilteredRPMAccel();
 
         if (isFlywheelDamaged() && !emergencyStop) {
@@ -150,7 +150,7 @@ public class Flywheel extends SubsystemBase {
         disabled = false;
     }
 
-    private double getRPM(double currentRPM) {
+    private double getFilteredRpm(double currentRPM) {
         runningRpmSum -= rpmBuffer[bufferIndex];
         rpmBuffer[bufferIndex] = currentRPM;
         runningRpmSum += currentRPM;
