@@ -32,7 +32,7 @@ public class AutonomousApp extends CommandOpMode {
     private Path scorePathFar;
     private Path parkPath;
 
-    private final Pose startPose = new Pose(55, 8, Math.toRadians(180));
+    private final Pose startPose = new Pose(56.8925, 8.6615, Math.toRadians(180)); // For robot size 17.323x17.785
     private final Pose scorePoseClose = new Pose(58.5, 45.2417, Math.toRadians(180));
     private final Pose scorePoseFar = new Pose(34.583, 119.1596, Math.toRadians(45));
     private final Pose collectPose = new Pose(10.5, 9.2, Math.toRadians(-103));
