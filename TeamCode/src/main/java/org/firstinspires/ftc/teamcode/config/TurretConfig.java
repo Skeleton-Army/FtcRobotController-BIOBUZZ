@@ -5,9 +5,8 @@ import com.seattlesolvers.solverslib.hardware.motors.Motor;
 
 @Config
 public class TurretConfig {
-    public static String TURRET_NAME = "idk"; //TODO: change turret motor name
-    public static Motor.GoBILDA TURRET_MOTOR = Motor.GoBILDA.RPM_1150; //TODO: set correct turret motor type
-    public static boolean TURRET_INVERTED = false;
+    public static String TURRET_NAME = "turret";
+    public static Motor.GoBILDA TURRET_MOTOR = Motor.GoBILDA.RPM_1150;
     public static double GEAR_RATIO = 1.0; //TODO: set turret gear ratio
 
     // --- PID ---
