@@ -12,6 +12,7 @@ public class Hood extends SubsystemBase {
     private final ServoEx hood;
 
     public Hood(final HardwareMap hardwareMap) {
+        super();
         hood = new ServoEx(hardwareMap, HOOD_NAME);
     }
 

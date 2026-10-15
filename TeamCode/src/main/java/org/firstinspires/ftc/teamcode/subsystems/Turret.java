@@ -32,7 +32,7 @@ public class Turret extends SubsystemBase {
     private final TimerEx startupTimer;
 
     public Turret(final HardwareMap hardwareMap) {
-
+        super();
         turret = new MotorEx(hardwareMap,TURRET_NAME, TURRET_MOTOR);
         turret.setRunMode(MotorEx.RunMode.RawPower);
         turret.setZeroPowerBehavior(MotorEx.ZeroPowerBehavior.BRAKE);
@@ -55,11 +55,6 @@ public class Turret extends SubsystemBase {
         }
 
         updateTurretPID();
-    }
-    public void updateVoltage(double voltage) {
-        if (voltage > 0) {
-            this.voltage = voltage;
-        }
     }
 
     public void setHorizontalAngle(double targetAngleRad) {
@@ -120,6 +115,10 @@ public class Turret extends SubsystemBase {
         recordTargetSample(currentTargetAngle, currentTime);
 
         return computeNetMotion();
+    }
+
+    public void updateVoltage(double voltage) {
+        this.voltage = voltage;
     }
 
     private boolean shouldSkipUpdate(double dt) {
@@ -234,6 +233,8 @@ public class Turret extends SubsystemBase {
         }
         return 0;
     }
+
+
 
     private double clampVoltage(double desiredVoltage) {
         return Math.max(-voltage, Math.min(voltage, desiredVoltage));

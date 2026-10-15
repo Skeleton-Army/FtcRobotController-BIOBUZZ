@@ -11,6 +11,7 @@ public class Shooter extends SubsystemBase {
     private final Hood hood;
 
     public Shooter(final HardwareMap hardwareMap) {
+        super();
         turret = new Turret(hardwareMap);
         flywheel = new Flywheel(hardwareMap);
         hood = new Hood(hardwareMap);
@@ -25,6 +26,11 @@ public class Shooter extends SubsystemBase {
         turret.setHorizontalAngle(turretAngleRad);
         hood.setVerticalAngle(hoodAngleRad);
         flywheel.setRPM(rpm);
+    }
+
+    @Override
+    public void periodic() {
+        updateVoltage(VoltageGetter.getInstance().getVoltage());
     }
 
     public boolean flywheelAtTarget() {
@@ -55,5 +61,10 @@ public class Shooter extends SubsystemBase {
 
     public Hood getHood() {
         return hood;
+    }
+
+    public void updateVoltage(double voltage) {
+        this.flywheel.updateVoltage(voltage);
+        this.turret.updateVoltage(voltage);
     }
 }

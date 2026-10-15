@@ -11,21 +11,14 @@ import com.qualcomm.robotcore.util.RobotLog;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.controller.PIDController;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
-import com.seattlesolvers.solverslib.hardware.motors.MotorGroup;
 import com.skeletonarmy.marrow.TimerEx;
 
 import java.util.concurrent.TimeUnit;
 
 public class Flywheel extends SubsystemBase {
-    private final MotorEx flywheel1;
-    private final MotorEx flywheel2;
-    private final MotorGroup flywheel;
+    private final MotorEx flywheel;
     private final PIDController flywheelPID;
-
-    private final VoltageSensor voltageSensor;
     private double voltage = 12;
-    private boolean voltageExternallySupplied = false;
-
     private double targetTPS;
     private double lastSpeedFlywheel = 0;
     private long lastLoopTime = 0;
@@ -45,11 +38,13 @@ public class Flywheel extends SubsystemBase {
     private boolean emergencyStop = false;
 
     public Flywheel(final HardwareMap hardwareMap) {
-        flywheel1 = new MotorEx(hardwareMap, FLYWHEEL1_NAME,
+        super();
+        flywheel = new MotorEx(hardwareMap, FLYWHEEL1_NAME,
                 FLYWHEEL_MOTOR.getCPR() * FLYWHEEL_GEAR_RATIO,
                 FLYWHEEL_MOTOR.getRPM() / FLYWHEEL_GEAR_RATIO);
-        flywheel1.setInverted(FLYWHEEL1_INVERTED);
+        flywheel.setInverted(FLYWHEEL1_INVERTED);
 
+        /*
         flywheel2 = new MotorEx(hardwareMap, FLYWHEEL2_NAME,
                 FLYWHEEL_MOTOR.getCPR() * FLYWHEEL_GEAR_RATIO,
                 FLYWHEEL_MOTOR.getRPM() / FLYWHEEL_GEAR_RATIO);
@@ -59,22 +54,21 @@ public class Flywheel extends SubsystemBase {
         flywheel.setVeloCoefficients(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
         flywheel.setFeedforwardCoefficients(FLYWHEEL_KS, FLYWHEEL_KV, FLYWHEEL_KA);
         flywheel.setRunMode(MotorEx.RunMode.RawPower);
+        */
+
+        flywheel.setVeloCoefficients(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
+        flywheel.setFeedforwardCoefficients(FLYWHEEL_KS, FLYWHEEL_KV, FLYWHEEL_KA);
+        flywheel.setRunMode(MotorEx.RunMode.RawPower);
 
         flywheelPID = new PIDController(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
 
         rampTimer = new TimerEx(TimeUnit.SECONDS);
         rampTimer.start();
         stallTimer = new TimerEx(TimeUnit.SECONDS);
-
-        voltageSensor = hardwareMap.voltageSensor.iterator().next();
     }
 
     @Override
     public void periodic() {
-        if (!voltageExternallySupplied) {
-            this.voltage = voltageSensor.getVoltage();
-        }
-
         filteredRPM = getFilteredRpm(getRPM());
         updateFilteredRPMAccel();
 
@@ -85,8 +79,6 @@ public class Flywheel extends SubsystemBase {
         }
 
         updateFlywheelPIDFiltered();
-
-        voltageExternallySupplied = false;
     }
 
     public boolean isFlywheelDamaged() {
@@ -138,7 +130,6 @@ public class Flywheel extends SubsystemBase {
 
     public void updateVoltage(double voltage) {
         this.voltage = voltage;
-        voltageExternallySupplied = true;
     }
 
     public void disable() {
