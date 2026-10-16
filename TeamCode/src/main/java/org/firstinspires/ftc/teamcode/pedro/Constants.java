@@ -1,5 +1,11 @@
 package org.firstinspires.ftc.teamcode.pedro;
 
+import android.content.Context;
+import android.net.wifi.WifiManager;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.pedropathing.algorithm.Foresight;
 import com.pedropathing.algorithm.ForesightConfig;
 import com.pedropathing.controllers.Controller;
@@ -16,10 +22,13 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.consts.Bots;
+
+import java.util.Objects;
 
 public class Constants {
 
-    public static MecanumConfig drivetrainConfig = new MecanumConfig(c -> {
+    public static MecanumConfig primaryDrivetrainConfig = new MecanumConfig(c -> {
         c.frontLeftName.set("leftFront");
         c.frontRightName.set("rightFront");
         c.backLeftName.set("leftBack");
@@ -30,7 +39,7 @@ public class Constants {
         c.backRightDirection.set(DcMotorSimple.Direction.FORWARD);
     });
 
-    public static PinpointConfig localizerConfig = new PinpointConfig(c -> {
+    public static PinpointConfig primaryLocalizerConfig = new PinpointConfig(c -> {
         c.name.set("pinpoint");
         c.podType.set(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
         c.xPodOffset.set(-6.889764);
@@ -41,7 +50,7 @@ public class Constants {
         c.offsetUnits.set(DistanceUnit.INCH);
     });
 
-    public static ForesightConfig foresightConfig = new ForesightConfig(
+    public static ForesightConfig primaryForesightConfig = new ForesightConfig(
             c -> {
                 Controller primaryTranslationalForward = Controller.proportional(0.2707654531023506);
                 Controller secondaryTranslationalForward = Controller.proportional(0.100040599935163);
@@ -67,27 +76,67 @@ public class Constants {
             }
     );
 
-    public static Follower create(HardwareMap h) {
-        localizerConfig.resetMode.set(PinpointLocalizer.ResetMode.RECALIBRATE_IMU);
+    public static MecanumConfig secondaryDrivetrainConfig = new MecanumConfig(c -> {
+
+    });
+
+    public static PinpointConfig secondaryLocalizerConfig = new PinpointConfig(c -> {
+
+    });
+
+    public static ForesightConfig secondaryForesightConfig = new ForesightConfig(c -> {
+
+    });
+
+    @Nullable
+    public static Follower create(HardwareMap h, PinpointLocalizer.ResetMode resetMode) {
+        WifiManager manager = (WifiManager) h.appContext.getSystemService(Context.WIFI_SERVICE);
+        String ssid = manager.getConnectionInfo().getSSID();
+
+        switch (Objects.requireNonNull(Bots.ssidToBot(ssid))) {
+            case PRIMARY:
+                return createPrimary(h, resetMode);
+            case SECONDARY:
+                return createSecondary(h, resetMode);
+            default:
+                return null;
+        }
+    }
+
+    public static Follower createPrimary(HardwareMap h, PinpointLocalizer.ResetMode resetMode) {
+        primaryLocalizerConfig.resetMode.set(resetMode);
 
         return new Follower(
-                new PinpointLocalizer(h, localizerConfig),
-                new Mecanum(h, drivetrainConfig),
-                new Foresight(foresightConfig)
+                new PinpointLocalizer(h, primaryLocalizerConfig),
+                new Mecanum(h, primaryDrivetrainConfig),
+                new Foresight(primaryForesightConfig)
         );
+    }
+
+    public static Follower createSecondary(HardwareMap h, PinpointLocalizer.ResetMode resetMode) {
+        secondaryLocalizerConfig.resetMode.set(resetMode);
+
+        return new Follower(
+                new PinpointLocalizer(h, secondaryLocalizerConfig),
+                new Mecanum(h, secondaryDrivetrainConfig),
+                new Foresight(secondaryForesightConfig)
+        );
+    }
+
+    /**
+     * Default follower creation method.
+     */
+    @Nullable
+    public static Follower create(HardwareMap h) {
+        return create(h, PinpointLocalizer.ResetMode.RECALIBRATE_IMU);
     }
 
     /**
      * Creates a follower that doesn't reset the pinpoint pose at the start.
      * This is useful for TeleOp when the robot continues off where the autonomous ended.
      */
+    @Nullable
     public static Follower createWithoutReset(HardwareMap h) {
-        localizerConfig.resetMode.set(PinpointLocalizer.ResetMode.NONE);
-
-        return new Follower(
-                new PinpointLocalizer(h, localizerConfig),
-                new Mecanum(h, drivetrainConfig),
-                new Foresight(foresightConfig)
-        );
+        return create(h, PinpointLocalizer.ResetMode.NONE);
     }
 }
