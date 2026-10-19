@@ -8,7 +8,9 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.skeletonarmy.marrow.LynxUtil;
+import com.skeletonarmy.marrow.telemetry.MarrowTelemetry;
 
+import org.firstinspires.ftc.teamcode.R;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @TeleOp(name="TeleOp")
