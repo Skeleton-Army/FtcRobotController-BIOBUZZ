@@ -141,7 +141,7 @@ public class Flywheel extends SubsystemBase {
         disabled = false;
     }
 
-    private double getFilteredRpm(double currentRPM) {
+    public double getFilteredRpm(double currentRPM) {
         runningRpmSum -= rpmBuffer[bufferIndex];
         rpmBuffer[bufferIndex] = currentRPM;
         runningRpmSum += currentRPM;

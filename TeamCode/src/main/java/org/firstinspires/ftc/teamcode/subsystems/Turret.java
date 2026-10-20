@@ -26,7 +26,6 @@ public class Turret extends SubsystemBase {
     private double lastTargetAngle = 0;
     private long lastTargetUpdateTime = 0;
     private boolean emergencyStop = false;
-    public double filteredRPM;
     private double voltage = 12;
     public boolean turretDisabled = false;
     private final TimerEx startupTimer;
@@ -72,7 +71,7 @@ public class Turret extends SubsystemBase {
         return turretPID.atSetPoint();
     }
 
-    public double getTurretAngle(AngleUnit angleUnit) {
+    public double getAngle(AngleUnit angleUnit) {
         return angleUnit == AngleUnit.DEGREES ? Math.toDegrees(getAngle()) : getAngle();
     }
 
@@ -207,7 +206,7 @@ public class Turret extends SubsystemBase {
     }
 
     private boolean shouldDisableTurret() {
-        return disabled || emergencyStop || filteredRPM < MIN_FLYWHEEL_RPM;
+        return disabled || emergencyStop;
     }
 
     private double computePID() {
@@ -233,8 +232,6 @@ public class Turret extends SubsystemBase {
         }
         return 0;
     }
-
-
 
     private double clampVoltage(double desiredVoltage) {
         return Math.max(-voltage, Math.min(voltage, desiredVoltage));
