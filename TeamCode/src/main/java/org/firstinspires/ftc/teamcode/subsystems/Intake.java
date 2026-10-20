@@ -16,10 +16,11 @@ public class Intake extends SubsystemBase {
 
     public Intake(final HardwareMap hardwareMap) {
         intake = new MotorEx(hardwareMap, INTAKE_NAME, INTAKE_MOTOR);
+        intake.setInverted(true);
         runtime.start();
         runtime.pause();
 
-        power = INTAKE_POWER;
+        power = INTAKE_RELEASE_POWER;
     }
 
     public double getRPM() {
@@ -27,11 +28,11 @@ public class Intake extends SubsystemBase {
         return (motorTPS * 60.0) / intake.getCPR();
     }
 
-    public void collect() {
+    public void startIntake() {
         if (!isCollecting) {
             runtime.restart();
         }
-        intake.set(-power);
+        intake.set(power);
         isCollecting = true;
     }
 
@@ -39,12 +40,12 @@ public class Intake extends SubsystemBase {
         this.power = power;
     }
 
-    public void release() {
-        intake.set(INTAKE_POWER);
+    public void releaseIntake() {
+        intake.set(-INTAKE_RELEASE_POWER);
         isCollecting = false;
     }
 
-    public void stop() {
+    public void stopIntake() {
         runtime.pause();
         intake.set(0);
         isCollecting = false;
