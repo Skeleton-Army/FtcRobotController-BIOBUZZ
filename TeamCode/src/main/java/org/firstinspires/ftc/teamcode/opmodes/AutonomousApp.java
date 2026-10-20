@@ -8,6 +8,7 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 import com.pedropathing.paths.Path;
+import com.pedropathing.paths.interpolator.Interpolator;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
@@ -32,10 +33,10 @@ public class AutonomousApp extends CommandOpMode {
     private Path scorePathFar;
     private Path parkPath;
 
-    private final Pose startPose = new Pose(56.8925, 8.6615, Math.toRadians(180)); // For robot size 17.323x17.785
-    private final Pose scorePoseClose = new Pose(58.5, 45.2417, Math.toRadians(180));
+    private final Pose startPose = new Pose(55, 8, Math.toRadians(90));
+    private final Pose scorePoseClose = new Pose(58.5, 15, Math.toRadians(90));
     private final Pose scorePoseFar = new Pose(34.583, 119.1596, Math.toRadians(45));
-    private final Pose collectPose = new Pose(10.5, 9.2, Math.toRadians(-103));
+    private final Pose collectPose = new Pose(12, 11, Math.toRadians(-103));
     private final Pose collectControlPoint = new Pose(20, 52, 0);
     private final Pose parkPose = new Pose(9.8, 119.6, Math.toRadians(45));
     //private final Pose farControlPoint1 = new Pose(5.0187, 41.4496, Math.toRadians(0));
@@ -68,7 +69,11 @@ public class AutonomousApp extends CommandOpMode {
                 changeAlliance(scorePoseClose, alliance),
                 changeAlliance(collectControlPoint, alliance),
                 changeAlliance(collectPose, alliance)
-        ).linear(changeAlliance(scorePoseClose, alliance), changeAlliance(collectPose, alliance));
+        ).heading(Interpolator.piecewise()
+                .until(0.5, Interpolator.linear(changeAlliance(scorePoseClose, alliance), changeAlliance(collectPose, alliance)))
+                .until(1, Interpolator.constant(changeAlliance(collectPose, alliance)))
+        );
+        //linear(changeAlliance(scorePoseClose, alliance), changeAlliance(collectPose, alliance));
     }
 
     private Path getScorePathFar(Alliance alliance) {
