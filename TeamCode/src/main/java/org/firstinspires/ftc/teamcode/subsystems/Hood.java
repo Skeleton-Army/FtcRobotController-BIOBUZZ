@@ -13,11 +13,8 @@ public class Hood extends SubsystemBase {
 
     public Hood(final HardwareMap hardwareMap) {
         super();
-        hood = new ServoEx(hardwareMap, HOOD_NAME);
-    }
-
-    public void setHoodPosition(double angle) {
-        hood.set(MathUtils.clamp(angle, HOOD_POSSIBLE_MIN, HOOD_POSSIBLE_MAX));
+        // Measurements given by hardware, if problem blame Tsipi.
+        hood = new ServoEx(hardwareMap, HOOD_NAME, HOOD_POSSIBLE_MIN, HOOD_POSSIBLE_MAX);
     }
 
     public double getRawHoodPosition() {
@@ -67,7 +64,7 @@ public class Hood extends SubsystemBase {
             targetPos = HOOD_POSSIBLE_MAX - (targetPos - HOOD_POSSIBLE_MIN);
         }
 
-        setHoodPosition(targetPos);
+        hood.set(targetPos);
     }
 
 
