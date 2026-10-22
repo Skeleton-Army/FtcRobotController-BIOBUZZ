@@ -33,14 +33,13 @@ public class AutonomousApp extends CommandOpMode {
     private Path scorePathFar;
     private Path parkPath;
 
-    private final Pose startPose = new Pose(55, 8, Math.toRadians(90));
-    private final Pose scorePoseClose = new Pose(58.5, 15, Math.toRadians(90));
-    private final Pose scorePoseFar = new Pose(34.583, 119.1596, Math.toRadians(45));
+    private final Pose startPose = new Pose(63.3, 8, Math.toRadians(180));
+    private final Pose scorePoseClose = new Pose(63.3, 15, Math.toRadians(180));
+    private final Pose farControlPoint = new Pose(31, 52.5);
+    private final Pose scorePoseFar = new Pose(34.5, 120, Math.toRadians(45));
     private final Pose collectPose = new Pose(12, 11, Math.toRadians(-103));
-    private final Pose collectControlPoint = new Pose(20, 52, 0);
-    private final Pose parkPose = new Pose(9.8, 119.6, Math.toRadians(45));
-    //private final Pose farControlPoint1 = new Pose(5.0187, 41.4496, Math.toRadians(0));
-    //private final Pose farControlPoint2 = new Pose(30.5131, 122.5821, Math.toRadians(0));
+    private final Pose collectControlPoint = new Pose(30, 52, 0);
+    private final Pose parkPose = new Pose(20, 119.6, Math.toRadians(45));
 
     public static Pose mirrorPose(Pose pose) {
         double newX = 144 - pose.x();
@@ -70,24 +69,24 @@ public class AutonomousApp extends CommandOpMode {
                 changeAlliance(collectControlPoint, alliance),
                 changeAlliance(collectPose, alliance)
         ).heading(Interpolator.piecewise()
-                .until(0.5, Interpolator.linear(changeAlliance(scorePoseClose, alliance), changeAlliance(collectPose, alliance)))
+                .until(0.7, Interpolator.linear(changeAlliance(scorePoseClose, alliance), changeAlliance(collectPose, alliance)))
                 .until(1, Interpolator.constant(changeAlliance(collectPose, alliance)))
         );
-        //linear(changeAlliance(scorePoseClose, alliance), changeAlliance(collectPose, alliance));
     }
 
     private Path getScorePathFar(Alliance alliance) {
-        return line(
+        return curve(
                 changeAlliance(collectPose, alliance),
+                changeAlliance(farControlPoint, alliance),
                 changeAlliance(scorePoseFar, alliance)
-        ).linear(changeAlliance(collectPose, alliance), changeAlliance(scorePoseFar, alliance));
+        ).constant(changeAlliance(collectPose, alliance));
     }
 
     private Path getParkPath(Alliance alliance) {
         return line(
                 changeAlliance(scorePoseFar, alliance),
                 changeAlliance(parkPose, alliance)
-        ).constant(changeAlliance(scorePoseFar , alliance));
+        ).constant(changeAlliance(collectPose , alliance));
     }
 
     @Override
