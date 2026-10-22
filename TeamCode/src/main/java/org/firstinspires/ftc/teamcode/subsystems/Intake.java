@@ -18,7 +18,10 @@ public class Intake extends SubsystemBase {
     public Intake(final HardwareMap hardwareMap) {
         intake = new MotorEx(hardwareMap, INTAKE_NAME, INTAKE_MOTOR);
         intake.setInverted(true);
+
         transfer = new MotorEx(hardwareMap, TRANSFER_NAME, TRANSFER_MOTOR);
+        transfer.setInverted(true);
+
         runtime.start();
         runtime.pause();
 
