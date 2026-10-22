@@ -6,7 +6,6 @@ import static org.firstinspires.ftc.teamcode.utils.MathUtilities.lowPassFilter;
 import androidx.core.math.MathUtils;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.RobotLog;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.controller.PIDController;
@@ -43,18 +42,6 @@ public class Flywheel extends SubsystemBase {
                 FLYWHEEL_MOTOR.getCPR() * FLYWHEEL_GEAR_RATIO,
                 FLYWHEEL_MOTOR.getRPM() / FLYWHEEL_GEAR_RATIO);
         flywheel.setInverted(FLYWHEEL1_INVERTED);
-
-        /*
-        flywheel2 = new MotorEx(hardwareMap, FLYWHEEL2_NAME,
-                FLYWHEEL_MOTOR.getCPR() * FLYWHEEL_GEAR_RATIO,
-                FLYWHEEL_MOTOR.getRPM() / FLYWHEEL_GEAR_RATIO);
-        flywheel2.setInverted(FLYWHEEL2_INVERTED);
-
-        flywheel = new MotorGroup(flywheel1, flywheel2);
-        flywheel.setVeloCoefficients(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
-        flywheel.setFeedforwardCoefficients(FLYWHEEL_KS, FLYWHEEL_KV, FLYWHEEL_KA);
-        flywheel.setRunMode(MotorEx.RunMode.RawPower);
-        */
 
         flywheel.setVeloCoefficients(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
         flywheel.setFeedforwardCoefficients(FLYWHEEL_KS, FLYWHEEL_KV, FLYWHEEL_KA);
@@ -206,16 +193,11 @@ public class Flywheel extends SubsystemBase {
         } else if (isBraking && error > BRAKE_EXIT_THRESHOLD * tpsPerRPM) {
             isBraking = false;
         }
-
-        if (isBraking) {
-            flywheelPID.setPID(FLYWHEEL_KP_DOWN, FLYWHEEL_KI, FLYWHEEL_KD);
-        } else {
             flywheelPID.setPID(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
-        }
 
         // 3. Calculate Acceleration for Feedforward
         double targetAcceleration = (speed - lastSpeedFlywheel) / dt;
-        double currentKA = (targetAcceleration >= 0) ? FLYWHEEL_KA : FLYWHEEL_KA_DOWN;
+        double currentKA = FLYWHEEL_KA;
 
         // PID and FF now output volts directly
         double pid = flywheelPID.calculate(processVariable, speed);

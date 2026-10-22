@@ -11,14 +11,12 @@ public class FlywheelConfig {
     public static double FLYWHEEL_GEAR_RATIO = 1.0;
 
     // --- PID / Feedforward ---
-    public static double FLYWHEEL_KP = 0;
-    public static double FLYWHEEL_KP_DOWN = 0;
+    public static double FLYWHEEL_KP = 0.06;
     public static double FLYWHEEL_KI = 0;
     public static double FLYWHEEL_KD = 0;
-    public static double FLYWHEEL_KS = 0;
-    public static double FLYWHEEL_KV = 0;
-    public static double FLYWHEEL_KA = 0;
-    public static double FLYWHEEL_KA_DOWN = 0;
+    public static double FLYWHEEL_KS = 1.2;
+    public static double FLYWHEEL_KV = 0.0049;
+    public static double FLYWHEEL_KA = 0.008;
 
     // --- Asymmetric gain (brake vs. drive) ---
     public static double BRAKE_ENTRY_THRESHOLD = -50;
