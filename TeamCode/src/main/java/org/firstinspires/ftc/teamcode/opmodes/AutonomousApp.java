@@ -22,10 +22,12 @@ import com.skeletonarmy.marrow.prompts.Prompter;
 
 import org.firstinspires.ftc.teamcode.enums.Alliance;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
+import org.firstinspires.ftc.teamcode.subsystems.Intake;
 
 @Autonomous(name="Autonomous", preselectTeleOp="TeleOp")
 public class AutonomousApp extends CommandOpMode {
     private final Prompter prompter = new Prompter(this);
+    private Intake intake;
     private Alliance alliance;
     private Follower follower;
     private Path scorePathClose;
@@ -102,6 +104,8 @@ public class AutonomousApp extends CommandOpMode {
         follower = Constants.create(hardwareMap);
         follower.setPose(changeAlliance(startPose, alliance));
 
+        intake = new Intake(hardwareMap);
+
         scorePathClose = getScorePathClose(alliance);
         collectPath = getCollectPath(alliance);
         scorePathFar = getScorePathFar(alliance);
@@ -113,9 +117,9 @@ public class AutonomousApp extends CommandOpMode {
                         new WaitCommand(2000),
 
                         new FollowPathCommand(follower, collectPath),
-//                        new InstantCommand(), // turn on intake
+                        new InstantCommand(intake::startIntake), // turn on intake
                         new WaitCommand(2000),
-//                        new InstantCommand(), // turn off intake
+                        new InstantCommand(intake::stopIntake), // turn off intake
 
                         new FollowPathCommand(follower, scorePathFar),
                         new InstantCommand(), // shoot
