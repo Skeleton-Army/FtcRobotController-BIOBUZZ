@@ -9,6 +9,7 @@ import com.skeletonarmy.marrow.TimerEx;
 
 public class Intake extends SubsystemBase {
     private final MotorEx intake;
+    private final MotorEx transfer;
     private boolean isCollecting = false;
     private final TimerEx runtime = new TimerEx();
 
@@ -17,6 +18,7 @@ public class Intake extends SubsystemBase {
     public Intake(final HardwareMap hardwareMap) {
         intake = new MotorEx(hardwareMap, INTAKE_NAME, INTAKE_MOTOR);
         intake.setInverted(true);
+        transfer = new MotorEx(hardwareMap, TRANSFER_NAME, TRANSFER_MOTOR);
         runtime.start();
         runtime.pause();
 
@@ -33,6 +35,7 @@ public class Intake extends SubsystemBase {
             runtime.restart();
         }
         intake.set(power);
+        transfer.set(1);
         isCollecting = true;
     }
 
@@ -48,6 +51,7 @@ public class Intake extends SubsystemBase {
     public void stopIntake() {
         runtime.pause();
         intake.set(0);
+        transfer.set(0);
         isCollecting = false;
     }
 

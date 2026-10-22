@@ -8,4 +8,6 @@ public class IntakeConfig {
     public static String INTAKE_NAME = "intake";
     public static GoBILDA INTAKE_MOTOR = GoBILDA.RPM_1150;
     public static double INTAKE_RELEASE_POWER = 1;
+    public static String TRANSFER_NAME = "transfer";
+    public static GoBILDA TRANSFER_MOTOR = GoBILDA.RPM_1150;
 }
