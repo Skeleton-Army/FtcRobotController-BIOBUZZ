@@ -37,11 +37,11 @@ public class AutonomousApp extends CommandOpMode {
 
     private final Pose startPose = new Pose(63.3, 8, Math.toRadians(180));
     private final Pose scorePoseClose = new Pose(63.3, 15, Math.toRadians(180));
-    private final Pose farControlPoint = new Pose(31, 52.5);
+    private final Pose farControlPoint = new Pose(35, 52.5);
     private final Pose scorePoseFar = new Pose(34.5, 120, Math.toRadians(45));
-    private final Pose collectPose = new Pose(12, 11, Math.toRadians(-103));
+    private final Pose collectPose = new Pose(15, 10, Math.toRadians(-103));
     private final Pose collectControlPoint = new Pose(30, 52, 0);
-    private final Pose parkPose = new Pose(20, 119.6, Math.toRadians(45));
+    private final Pose parkPose = new Pose(24, 95, Math.toRadians(270));
 
     public static Pose mirrorPose(Pose pose) {
         double newX = 144 - pose.x();
@@ -88,7 +88,19 @@ public class AutonomousApp extends CommandOpMode {
         return line(
                 changeAlliance(scorePoseFar, alliance),
                 changeAlliance(parkPose, alliance)
-        ).constant(changeAlliance(collectPose , alliance));
+        ).linear(changeAlliance(collectPose , alliance), changeAlliance(parkPose, alliance));
+    }
+
+    private SequentialCommandGroup pulseIntake(int pulses) {
+        SequentialCommandGroup group = new SequentialCommandGroup();
+        for (int i = 0; i < pulses; i++) {
+        group.addCommands(
+                new InstantCommand(intake::startIntake),
+                new WaitCommand(500),
+                new InstantCommand(intake::stopIntake),
+                new WaitCommand(500));
+        }
+        return group;
     }
 
     @Override
@@ -117,9 +129,9 @@ public class AutonomousApp extends CommandOpMode {
                         new WaitCommand(2000),
 
                         new FollowPathCommand(follower, collectPath),
-                        new InstantCommand(intake::startIntake), // turn on intake
-                        new WaitCommand(2000),
-                        new InstantCommand(intake::stopIntake), // turn off intake
+                        new InstantCommand(intake::startTransfer),
+                        pulseIntake(4),
+                        new InstantCommand(intake::stopTransfer),
 
                         new FollowPathCommand(follower, scorePathFar),
                         new InstantCommand(), // shoot
