@@ -21,6 +21,7 @@ import com.skeletonarmy.marrow.prompts.OptionPrompt;
 import com.skeletonarmy.marrow.prompts.Prompter;
 
 import org.firstinspires.ftc.teamcode.enums.Alliance;
+import org.firstinspires.ftc.teamcode.enums.Parking;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Intake;
 
@@ -29,6 +30,7 @@ public class AutonomousApp extends CommandOpMode {
     private final Prompter prompter = new Prompter(this);
     private Intake intake;
     private Alliance alliance;
+    private Parking parking;
     private Follower follower;
     private Path scorePathClose;
     private Path collectPath;
@@ -43,6 +45,10 @@ public class AutonomousApp extends CommandOpMode {
     private final Pose collectControlPoint = new Pose(30, 52, 0);
     private final Pose parkPose = new Pose(24, 95, Math.toRadians(270));
 
+    public void afterPrompts() {
+        parking = prompter.getOrDefault("parking", Parking.CLOSE);
+        alliance = prompter.getOrDefault("alliance", Alliance.RED);
+    }
     public static Pose mirrorPose(Pose pose) {
         double newX = 144 - pose.x();
         double newY = 144 -pose.y();
@@ -106,8 +112,8 @@ public class AutonomousApp extends CommandOpMode {
     @Override
     public void initialize() {
         prompter.prompt("alliance", new OptionPrompt<>("SELECT ALLIANCE", Alliance.RED, Alliance.BLUE))
-                .onComplete(() -> alliance = prompter.getOrDefault("alliance", Alliance.RED)
-        );
+                .prompt("parking", new OptionPrompt<>("SELECT PARKING LOCATION", Parking.CLOSE, Parking.FAR))
+                .onComplete(this::afterPrompts);
 
 
         LynxUtil.setBulkCachingMode(hardwareMap, LynxModule.BulkCachingMode.MANUAL);
