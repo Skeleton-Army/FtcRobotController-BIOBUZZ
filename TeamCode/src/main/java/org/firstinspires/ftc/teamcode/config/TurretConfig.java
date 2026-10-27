@@ -34,4 +34,8 @@ public class TurretConfig {
     // --- Tolerance ---
     public static double TURRET_POSITION_TOLERANCE = 0.02;
     public static double TURRET_VELOCITY_TOLERANCE = 0.1;
+
+    // -- Geometry --
+    public static double TURRET_OFFSET_X = 0;
+    public static double TURRET_OFFSET_Y = 0;
 }

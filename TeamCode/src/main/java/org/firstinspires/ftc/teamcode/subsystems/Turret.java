@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import static org.firstinspires.ftc.teamcode.config.TurretConfig.*;
 import static org.firstinspires.ftc.teamcode.utils.MathUtilities.lowPassFilter;
 
+import com.pedropathing.follower.Follower;
+import com.pedropathing.math.Pose;
 import com.pedropathing.utils.Angle;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
@@ -29,8 +31,10 @@ public class Turret extends SubsystemBase {
     private double voltage = 12;
     public boolean turretDisabled = false;
     private final TimerEx startupTimer;
+    private Pose targetPose = Pose.zero();
+    private final Follower follower;
 
-    public Turret(final HardwareMap hardwareMap) {
+    public Turret(final HardwareMap hardwareMap, final Follower follower) {
         super();
         turret = new MotorEx(hardwareMap,TURRET_NAME, TURRET_MOTOR);
         turret.setRunMode(MotorEx.RunMode.RawPower);
@@ -40,7 +44,9 @@ public class Turret extends SubsystemBase {
         turretPID = new PIDController(TURRET_KP, TURRET_KI, TURRET_KD);
         turretPID.setTolerance(TURRET_POSITION_TOLERANCE, TURRET_VELOCITY_TOLERANCE);
 
-        setHorizontalAngle(0);
+        this.follower = follower;
+
+        setTargetAngle(0);
 
         startupTimer = new TimerEx(TimeUnit.SECONDS);
         startupTimer.start();
@@ -53,19 +59,11 @@ public class Turret extends SubsystemBase {
             return;
         }
 
+
+        setTargetAngle(calculateTurretAngle(targetPose, follower.pose()));
         updateTurretPID();
     }
 
-    public void setHorizontalAngle(double targetAngleRad) {
-        double lastCmd = hasWrappedTarget ? lastWrappedTarget : getAngle();
-
-        double wrapped = wrapToTarget(lastCmd, targetAngleRad, TURRET_MIN, TURRET_MAX, TURRET_WRAP, lastCmd);
-
-        lastWrappedTarget = wrapped;
-        hasWrappedTarget = true;
-
-        turretPID.setSetPoint(wrapped);
-    }
 
     public boolean reachedAngle() {
         return turretPID.atSetPoint();
@@ -235,5 +233,29 @@ public class Turret extends SubsystemBase {
 
     private double clampVoltage(double desiredVoltage) {
         return Math.max(-voltage, Math.min(voltage, desiredVoltage));
+    }
+    private double calculateTurretAngle(Pose targetPose, Pose robotPose) {
+        double heading = robotPose.heading();
+        double turretX = robotPose.x() + TURRET_OFFSET_X * Math.cos(heading) - TURRET_OFFSET_Y * Math.sin(heading);
+        double turretY = robotPose.y() + TURRET_OFFSET_X * Math.sin(heading) + TURRET_OFFSET_Y * Math.cos(heading);
+
+        return Math.atan2(targetPose.y() - turretY, targetPose.y() - turretX);
+    }
+
+
+    private void setTargetAngle(double targetAngleRad) {
+        double lastCmd = hasWrappedTarget ? lastWrappedTarget : getAngle();
+
+        double wrapped = wrapToTarget(lastCmd, targetAngleRad, TURRET_MIN, TURRET_MAX, TURRET_WRAP, lastCmd);
+
+        lastWrappedTarget = wrapped;
+        hasWrappedTarget = true;
+
+        turretPID.setSetPoint(wrapped);
+
+    }
+
+    public void setTargetPose(Pose target) {
+        targetPose = target;
     }
 }
