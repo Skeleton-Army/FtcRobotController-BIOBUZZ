@@ -38,8 +38,15 @@ public class Intake extends SubsystemBase {
             runtime.restart();
         }
         intake.set(power);
-        transfer.set(1);
         isCollecting = true;
+    }
+
+    public void startTransfer() {
+        transfer.set(1);
+    }
+
+    public void stopTransfer() {
+        transfer.set(0);
     }
 
     public void setIntakeSpeed(double power) {
@@ -54,7 +61,6 @@ public class Intake extends SubsystemBase {
     public void stopIntake() {
         runtime.pause();
         intake.set(0);
-        transfer.set(0);
         isCollecting = false;
     }
 
