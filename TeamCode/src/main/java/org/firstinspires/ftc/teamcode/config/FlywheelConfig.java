@@ -5,9 +5,9 @@ import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 
 @Config
 public class FlywheelConfig {
-    public static String FLYWHEEL1_NAME = "flywheel";
+    public static String FLYWHEEL_NAME = "flywheel";
     public static MotorEx.GoBILDA FLYWHEEL_MOTOR = MotorEx.GoBILDA.BARE;
-    public static boolean FLYWHEEL1_INVERTED = false;
+    public static boolean FLYWHEEL_INVERTED = true;
     public static double FLYWHEEL_GEAR_RATIO = 1.0;
 
     // --- PID / Feedforward ---

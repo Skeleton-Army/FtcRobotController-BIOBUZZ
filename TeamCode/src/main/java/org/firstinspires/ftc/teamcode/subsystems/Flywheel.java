@@ -38,10 +38,10 @@ public class Flywheel extends SubsystemBase {
 
     public Flywheel(final HardwareMap hardwareMap) {
         super();
-        flywheel = new MotorEx(hardwareMap, FLYWHEEL1_NAME,
+        flywheel = new MotorEx(hardwareMap, FLYWHEEL_NAME,
                 FLYWHEEL_MOTOR.getCPR() * FLYWHEEL_GEAR_RATIO,
                 FLYWHEEL_MOTOR.getRPM() / FLYWHEEL_GEAR_RATIO);
-        flywheel.setInverted(FLYWHEEL1_INVERTED);
+        flywheel.setInverted(FLYWHEEL_INVERTED);
 
         flywheel.setVeloCoefficients(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
         flywheel.setFeedforwardCoefficients(FLYWHEEL_KS, FLYWHEEL_KV, FLYWHEEL_KA);

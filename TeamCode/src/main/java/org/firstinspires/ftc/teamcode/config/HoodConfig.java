@@ -5,7 +5,7 @@ import com.acmerobotics.dashboard.config.Config;
 @Config
 public class HoodConfig {
     public static String HOOD_NAME = "hood"; 
-    public static boolean HOOD_INVERTED = false;
+    public static boolean HOOD_INVERTED = true;
 
     // --- Servo position range the hardware can physically reach ---
     public static double HOOD_POSSIBLE_MIN = 0.2;
