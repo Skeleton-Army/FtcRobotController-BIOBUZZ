@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.enums;
 
 public enum Parking {
-    CLOSE,
-    FAR
+    CORNER_SIDE,
+    FLOWER_SIDE
 }
