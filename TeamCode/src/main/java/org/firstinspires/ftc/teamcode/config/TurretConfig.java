@@ -7,10 +7,10 @@ import com.seattlesolvers.solverslib.hardware.motors.Motor;
 public class TurretConfig {
     public static String TURRET_NAME = "turret";
     public static Motor.GoBILDA TURRET_MOTOR = Motor.GoBILDA.RPM_1150;
-    public static double GEAR_RATIO = 1.0; //TODO: set turret gear ratio
+    public static double GEAR_RATIO = (double) 111 / 11; //TODO: set turret gear ratio
 
     // --- PID ---
-    public static double TURRET_KP = 0;
+    public static double TURRET_KP = 8;
     public static double TURRET_KI = 0;
     public static double TURRET_KD = 0;
     public static double TURRET_KV = 0;
@@ -27,8 +27,8 @@ public class TurretConfig {
     public static final double MAX_TARGET_ACCEL = 4;
 
     // --- Range / wrapping ---
-    public static double TURRET_MIN = -Math.PI;
-    public static double TURRET_MAX = Math.PI;
+    public static double TURRET_MIN = Math.toRadians(-90);
+    public static double TURRET_MAX = Math.toRadians(90);
     public static boolean TURRET_WRAP = true;
 
     // --- Tolerance ---

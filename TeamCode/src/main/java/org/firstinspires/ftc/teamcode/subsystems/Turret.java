@@ -10,6 +10,7 @@ import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.controller.PIDController;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.seattlesolvers.solverslib.util.MathUtils;
+import com.skeletonarmy.marrow.OpModeManager;
 import com.skeletonarmy.marrow.TimerEx;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -29,7 +30,6 @@ public class Turret extends SubsystemBase {
     private long lastTargetUpdateTime = 0;
     private boolean emergencyStop = false;
     private double voltage = 12;
-    public boolean turretDisabled = false;
     private final TimerEx startupTimer;
     private Pose targetPose = Pose.zero();
     private final Follower follower;
@@ -54,7 +54,7 @@ public class Turret extends SubsystemBase {
 
     @Override
     public void periodic() {
-        if (disabled || turretDisabled) {
+        if (disabled) {
             turret.set(0);
             return;
         }
@@ -199,7 +199,8 @@ public class Turret extends SubsystemBase {
         double staticComp = computeStaticComp(totalRequest);
 
         double desiredVoltage = clampVoltage(totalRequest + staticComp);
-
+        OpModeManager.getTelemetry().addData("jeex",desiredVoltage);
+        OpModeManager.getTelemetry().update();
         turret.set(desiredVoltage / voltage);
     }
 
@@ -209,6 +210,8 @@ public class Turret extends SubsystemBase {
 
     private double computePID() {
         double measuredPos = turret.getDistance();
+        OpModeManager.getTelemetry().addData("miguel",measuredPos);
+        OpModeManager.getTelemetry().addData("miguel2",turretPID.getSetPoint());
 
         double pid = turretPID.calculate(measuredPos);
         double error = turretPID.getPositionError();
@@ -239,7 +242,8 @@ public class Turret extends SubsystemBase {
         double turretX = robotPose.x() + TURRET_OFFSET_X * Math.cos(heading) - TURRET_OFFSET_Y * Math.sin(heading);
         double turretY = robotPose.y() + TURRET_OFFSET_X * Math.sin(heading) + TURRET_OFFSET_Y * Math.cos(heading);
 
-        return Math.atan2(targetPose.y() - turretY, targetPose.y() - turretX);
+        double fieldAngle = Math.atan2(targetPose.y() - turretY, targetPose.x() - turretX);
+        return Angle.normalizeSigned(fieldAngle - heading);
     }
 
 
