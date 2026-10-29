@@ -2,7 +2,8 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.firstinspires.ftc.teamcode.config.FlywheelConfig.RPM_REACHED_THRESHOLD;
 
-import com.pedropathing.localization.Localizer;
+import com.pedropathing.follower.Follower;
+import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 
@@ -11,21 +12,20 @@ public class Shooter extends SubsystemBase {
     private final Flywheel flywheel;
     private final Hood hood;
 
-    public Shooter(final HardwareMap hardwareMap, final Localizer localizer) {
+    public Shooter(final HardwareMap hardwareMap, final Follower follower) {
         super();
-        //turret = new Turret(hardwareMap, localizer);
-        turret = null;
+        turret = new Turret(hardwareMap, follower);
         flywheel = new Flywheel(hardwareMap);
         hood = new Hood(hardwareMap);
     }
 
     /**
-     * @param turretAngleRad target turret angle in radians
+     * @param turretTargetPose target turret angle in radians
      * @param hoodAngleRad   target hood angle in radians
      * @param rpm            target flywheel RPM
      */
-    public void setTarget(double turretAngleRad, double hoodAngleRad, double rpm) {
-        //turret.setHorizontalTargetAngle(turretAngleRad);
+    public void setTarget(Pose turretTargetPose, double hoodAngleRad, double rpm) {
+        turret.setTargetPose(turretTargetPose);
         hood.setVerticalAngle(hoodAngleRad);
         flywheel.setRPM(rpm);
     }
