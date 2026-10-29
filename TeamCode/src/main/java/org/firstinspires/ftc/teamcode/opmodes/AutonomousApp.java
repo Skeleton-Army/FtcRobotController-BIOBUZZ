@@ -43,7 +43,8 @@ public class AutonomousApp extends CommandOpMode {
     private final Pose scorePoseFar = new Pose(34.5, 120, Math.toRadians(45));
     private final Pose collectPose = new Pose(15, 10, Math.toRadians(-103));
     private final Pose collectControlPoint = new Pose(30, 52, 0);
-    private final Pose parkPose = new Pose(24, 95, Math.toRadians(270));
+    private final Pose parkPoseClose = new Pose(24, 92, Math.toRadians(270));
+    private final Pose parkPoseFar = new Pose(24, 118, Math.toRadians(270));
 
     public void afterPrompts() {
         parking = prompter.getOrDefault("parking", Parking.CLOSE);
@@ -90,11 +91,19 @@ public class AutonomousApp extends CommandOpMode {
         ).constant(changeAlliance(collectPose, alliance));
     }
 
-    private Path getParkPath(Alliance alliance) {
-        return line(
-                changeAlliance(scorePoseFar, alliance),
-                changeAlliance(parkPose, alliance)
-        ).linear(changeAlliance(collectPose , alliance), changeAlliance(parkPose, alliance));
+    private Path getParkPath(Alliance alliance, Parking parking) {
+        if (parking == Parking.CLOSE) {
+            return line(
+                    changeAlliance(scorePoseFar, alliance),
+                    changeAlliance(parkPoseClose, alliance)
+            ).linear(changeAlliance(collectPose , alliance), changeAlliance(parkPoseClose, alliance));
+        }
+        else {
+            return line(
+                    changeAlliance(scorePoseFar, alliance),
+                    changeAlliance(parkPoseFar, alliance)
+            ).linear(changeAlliance(collectPose , alliance), changeAlliance(parkPoseFar, alliance));
+        }
     }
 
     private SequentialCommandGroup pulseIntake(int pulses) {
@@ -127,7 +136,7 @@ public class AutonomousApp extends CommandOpMode {
         scorePathClose = getScorePathClose(alliance);
         collectPath = getCollectPath(alliance);
         scorePathFar = getScorePathFar(alliance);
-        parkPath = getParkPath(alliance);
+        parkPath = getParkPath(alliance, parking);
         schedule(
                 new SequentialCommandGroup(
                         new FollowPathCommand(follower, scorePathClose),
