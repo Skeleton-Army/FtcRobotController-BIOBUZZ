@@ -39,12 +39,12 @@ public class AutonomousApp extends CommandOpMode {
 
     private final Pose startPose = new Pose(63.3, 8, Math.toRadians(180));
     private final Pose scorePoseClose = new Pose(63.3, 15, Math.toRadians(180));
-    private final Pose scoreCloseControlPoint = new Pose(35, 52.5);
-    private final Pose scoreFarControlPoint = new Pose(28.5, 130);
-    private final Pose scorePoseFar = new Pose(48.5, 120, Math.toRadians(45));
+    private final Pose scoreCloseControlPoint = new Pose(35, 53);
+    private final Pose scoreFarControlPoint = new Pose(22, 120);
+    private final Pose scorePoseFar = new Pose(49, 120, Math.toRadians(45));
     private final Pose collectPose = new Pose(15, 10, Math.toRadians(-103));
     private final Pose collectControlPoint = new Pose(30, 52, 0);
-    private final Pose parkPoseCornerSide = new Pose(24, 118, Math.toRadians(270));
+    private final Pose parkPoseCornerSide = new Pose(17 , 121, 0);
     private final Pose parkPoseFlowerSide = new Pose(24, 92, Math.toRadians(270));
 
     public void afterPromptsInitialize() {
@@ -78,6 +78,12 @@ public class AutonomousApp extends CommandOpMode {
                 )
         );
     }
+    public static Pose changeAlliance(Pose pose, Alliance alliance) {
+        if (alliance == Alliance.BLUE) {
+            return mirrorPose(pose);
+        }
+        return pose;
+    }
         public static Pose mirrorPose(Pose pose) {
         double newX = 144 - pose.x();
         double newY = 144 -pose.y();
@@ -88,43 +94,43 @@ public class AutonomousApp extends CommandOpMode {
 
     private Path getScorePathClose(Alliance alliance) {
         return line(
-                startPose,
-                scorePoseClose
-        ).constant(startPose);
+                changeAlliance(startPose, alliance),
+                changeAlliance(scorePoseClose, alliance)
+        ).constant(changeAlliance(startPose, alliance));
     }
 
     private Path getCollectPath(Alliance alliance) {
         return curve(
-                scorePoseClose,
-                collectControlPoint,
-                collectPose
+                changeAlliance(scorePoseClose, alliance),
+                changeAlliance(collectControlPoint, alliance),
+                changeAlliance(collectPose, alliance)
         ).heading(Interpolator.piecewise()
-                .until(0.7, Interpolator.linear(scorePoseClose, collectPose))
-                .until(1, Interpolator.constant(collectPose))
+                .until(0.7, Interpolator.linear(changeAlliance(scorePoseClose, alliance), changeAlliance(collectPose, alliance)))
+                .until(1, Interpolator.constant(changeAlliance(collectPose, alliance)))
         );
     }
 
     private Path getScorePathFar(Alliance alliance) {
         return curve(
-                collectPose,
-                scoreCloseControlPoint,
-                scoreFarControlPoint,
-                scorePoseFar
-        ).constant(collectPose);
+                changeAlliance(collectPose, alliance),
+                changeAlliance(scoreCloseControlPoint, alliance),
+                changeAlliance(scoreFarControlPoint, alliance),
+                changeAlliance(scorePoseFar, alliance)
+        ).constant(changeAlliance(collectPose, alliance));
     }
 
     private Path getParkPath(Alliance alliance, Parking parking) {
         if (parking == Parking.CORNER_SIDE) {
             return line(
-                    scorePoseFar,
-                    parkPoseCornerSide
-            ).linear(collectPose , parkPoseCornerSide);
+                    changeAlliance(scorePoseFar, alliance),
+                    changeAlliance(parkPoseCornerSide, alliance)
+            ).linear(changeAlliance(collectPose, alliance) , changeAlliance(parkPoseCornerSide, alliance));
         }
         else if (parking == Parking.FLOWER_SIDE){
             return line(
-                    scorePoseFar,
-                    parkPoseFlowerSide
-            ).linear(collectPose, parkPoseFlowerSide);
+                    changeAlliance(scorePoseFar, alliance),
+                    changeAlliance(parkPoseFlowerSide, alliance)
+            ).linear(changeAlliance(collectPose, alliance), changeAlliance(parkPoseFlowerSide, alliance));
         }
         return null;
     }
