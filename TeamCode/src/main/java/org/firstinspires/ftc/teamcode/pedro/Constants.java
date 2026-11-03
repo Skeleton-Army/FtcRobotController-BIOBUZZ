@@ -19,6 +19,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.internal.network.NetworkConnectionHandler;
 import org.firstinspires.ftc.teamcode.consts.Bots;
+import org.w3c.dom.ProcessingInstruction;
 
 public class Constants {
     private static final MecanumConfig primaryDrivetrainConfig = new MecanumConfig(c -> {
@@ -69,17 +70,11 @@ public class Constants {
             }
     );
 
-    private static final MecanumConfig secondaryDrivetrainConfig = new MecanumConfig(c -> {
+    private static final MecanumConfig secondaryDrivetrainConfig = primaryDrivetrainConfig;
 
-    });
+    private static final PinpointConfig secondaryLocalizerConfig = primaryLocalizerConfig;
 
-    private static final PinpointConfig secondaryLocalizerConfig = new PinpointConfig(c -> {
-
-    });
-
-    private static final ForesightConfig secondaryForesightConfig = new ForesightConfig(c -> {
-
-    });
+    private static final ForesightConfig secondaryForesightConfig = primaryForesightConfig;
 
     @NonNull
     public static Follower create(HardwareMap h, PinpointLocalizer.ResetMode resetMode) {

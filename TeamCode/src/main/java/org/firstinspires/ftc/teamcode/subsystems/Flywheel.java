@@ -98,7 +98,7 @@ public class Flywheel extends SubsystemBase {
     }
 
     public double getRPM() {
-        double motorTPS = flywheel.getVelocity();
+        double motorTPS = flywheel.getCorrectedVelocity();
         return (motorTPS * 60.0) / flywheel.getCPR();
     }
 
@@ -185,15 +185,7 @@ public class Flywheel extends SubsystemBase {
         double tpsPerRPM = flywheel.getCPR() / 60.0;
         double processVariable = filteredRPM * tpsPerRPM;
 
-        // --- ASYMMETRIC P-GAIN LOGIC ---
-        double error = speed - processVariable;
-
-        if (!isBraking && error < BRAKE_ENTRY_THRESHOLD * tpsPerRPM) {
-            isBraking = true;
-        } else if (isBraking && error > BRAKE_EXIT_THRESHOLD * tpsPerRPM) {
-            isBraking = false;
-        }
-            flywheelPID.setPID(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
+        flywheelPID.setPID(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
 
         // 3. Calculate Acceleration for Feedforward
         double targetAcceleration = (speed - lastSpeedFlywheel) / dt;

@@ -199,8 +199,6 @@ public class Turret extends SubsystemBase {
         double staticComp = computeStaticComp(totalRequest);
 
         double desiredVoltage = clampVoltage(totalRequest + staticComp);
-        OpModeManager.getTelemetry().addData("jeex",desiredVoltage);
-        OpModeManager.getTelemetry().update();
         turret.set(desiredVoltage / voltage);
     }
 
@@ -210,8 +208,6 @@ public class Turret extends SubsystemBase {
 
     private double computePID() {
         double measuredPos = turret.getDistance();
-        OpModeManager.getTelemetry().addData("miguel",measuredPos);
-        OpModeManager.getTelemetry().addData("miguel2",turretPID.getSetPoint());
 
         double pid = turretPID.calculate(measuredPos);
         double error = turretPID.getPositionError();

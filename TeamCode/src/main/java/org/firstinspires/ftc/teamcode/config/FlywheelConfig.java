@@ -19,8 +19,6 @@ public class FlywheelConfig {
     public static double FLYWHEEL_KA = 0.008;
 
     // --- Asymmetric gain (brake vs. drive) ---
-    public static double BRAKE_ENTRY_THRESHOLD = -50;
-    public static double BRAKE_EXIT_THRESHOLD = -20;
     public static double INITIAL_RAMP_DURATION = 0.5;
 
     // --- Safety ---
