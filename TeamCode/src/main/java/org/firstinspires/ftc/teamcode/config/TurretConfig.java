@@ -38,4 +38,8 @@ public class TurretConfig {
     // -- Geometry --
     public static double TURRET_OFFSET_X = 0;
     public static double TURRET_OFFSET_Y = 0;
+
+    // -- Safety --
+    public static double ANGLE_DIFFERENCE_THRESHOLD = Math.toRadians(60);
+    public static double TRAVEL_TIME_THRESHOLD = 1;
 }

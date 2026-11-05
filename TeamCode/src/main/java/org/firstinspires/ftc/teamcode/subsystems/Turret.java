@@ -1,19 +1,19 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 import static org.firstinspires.ftc.teamcode.config.TurretConfig.*;
-import static org.firstinspires.ftc.teamcode.utils.MathUtilities.lowPassFilter;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 import com.pedropathing.utils.Angle;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.RobotLog;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.controller.PIDController;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.seattlesolvers.solverslib.util.MathUtils;
-import com.skeletonarmy.marrow.OpModeManager;
 import com.skeletonarmy.marrow.TimerEx;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.utils.MathUtilities;
 
 import java.util.concurrent.TimeUnit;
 
@@ -29,8 +29,9 @@ public class Turret extends SubsystemBase {
     private double lastTargetAngle = 0;
     private long lastTargetUpdateTime = 0;
     private boolean emergencyStop = false;
-    private double voltage = 12;
+    private double voltage;
     private final TimerEx startupTimer;
+    private final TimerEx stallTimer;
     private Pose targetPose = Pose.zero();
     private final Follower follower;
 
@@ -48,19 +49,24 @@ public class Turret extends SubsystemBase {
 
         setTargetAngle(0);
 
+        voltage = VoltageGetter.getInstance().getVoltage();
+
         startupTimer = new TimerEx(TimeUnit.SECONDS);
         startupTimer.start();
+        stallTimer = new TimerEx(TimeUnit.SECONDS);
     }
 
     @Override
     public void periodic() {
-        if (disabled) {
-            turret.set(0);
+
+        if (isTurretDamaged() && !emergencyStop || disabled) {
+            turret.stopMotor();
+            emergencyStop = true;
             return;
         }
 
 
-        setTargetAngle(calculateTurretAngle(targetPose, follower.pose()));
+        setTargetAngle(calculateTargetAngle(targetPose, follower.pose()));
         updateTurretPID();
     }
 
@@ -134,8 +140,8 @@ public class Turret extends SubsystemBase {
     }
 
     private void updateFilteredKinematics(double rawTargetVel, double rawTargetAccel) {
-        filteredTargetVel = lowPassFilter(rawTargetVel, filteredTargetVel, TURRET_DERIVATIVE_GAIN);
-        filteredTargetAccel = lowPassFilter(rawTargetAccel, filteredTargetAccel, TURRET_SECOND_DERIVATIVE_GAIN);
+        filteredTargetVel = MathUtilities.lowPassFilter(rawTargetVel, filteredTargetVel, TURRET_DERIVATIVE_GAIN);
+        filteredTargetAccel = MathUtilities.lowPassFilter(rawTargetAccel, filteredTargetAccel, TURRET_SECOND_DERIVATIVE_GAIN);
     }
 
     private double[] computeNetMotion() {
@@ -233,7 +239,7 @@ public class Turret extends SubsystemBase {
     private double clampVoltage(double desiredVoltage) {
         return Math.max(-voltage, Math.min(voltage, desiredVoltage));
     }
-    private double calculateTurretAngle(Pose targetPose, Pose robotPose) {
+    private double calculateTargetAngle(Pose targetPose, Pose robotPose) {
         double heading = robotPose.heading();
         double turretX = robotPose.x() + TURRET_OFFSET_X * Math.cos(heading) - TURRET_OFFSET_Y * Math.sin(heading);
         double turretY = robotPose.y() + TURRET_OFFSET_X * Math.sin(heading) + TURRET_OFFSET_Y * Math.cos(heading);
@@ -241,7 +247,6 @@ public class Turret extends SubsystemBase {
         double fieldAngle = Math.atan2(targetPose.y() - turretY, targetPose.x() - turretX);
         return Angle.normalizeSigned(fieldAngle - heading);
     }
-
 
     private void setTargetAngle(double targetAngleRad) {
         double lastCmd = hasWrappedTarget ? lastWrappedTarget : getAngle();
@@ -252,7 +257,22 @@ public class Turret extends SubsystemBase {
         hasWrappedTarget = true;
 
         turretPID.setSetPoint(wrapped);
+    }
 
+    private boolean isTurretDamaged(){
+        boolean isStalling = calculateTargetAngle(targetPose,follower.pose()) - getAngle() > ANGLE_DIFFERENCE_THRESHOLD;
+
+        if (isStalling) {
+            stallTimer.start();
+
+            if (stallTimer.getElapsed() > TRAVEL_TIME_THRESHOLD) {
+                RobotLog.addGlobalWarningMessage("TURRET STALL DETECTED.");
+                return true;
+            }
+        } else {
+            stallTimer.pause();
+        }
+        return false;
     }
 
     public void setTargetPose(Pose target) {
