@@ -10,14 +10,14 @@ public class TurretConfig {
     public static double GEAR_RATIO = (double) 111 / 11; //TODO: set turret gear ratio
 
     // --- PID ---
-    public static double TURRET_KP = 8;
-    public static double TURRET_KI = 0;
-    public static double TURRET_KD = 0;
-    public static double TURRET_KV = 0;
+    public static double TURRET_KP = 12;
+    public static double TURRET_KI = 2;
+    public static double TURRET_KD = 0.3;
+    public static double TURRET_KV = 1;
     public static double TURRET_KA = 0;
-    public static double TURRET_KS = 0;
-    public static double TURRET_DERIVATIVE_GAIN = 0;
-    public static double TURRET_SECOND_DERIVATIVE_GAIN = 0;
+    public static double TURRET_KS = 0.5;
+    public static double TURRET_DERIVATIVE_GAIN = 0.8;
+    public static double TURRET_SECOND_DERIVATIVE_GAIN = 0.8;
     public static double TURRET_IZONE = Math.toRadians(30);
     public static double TURRET_MIN_VOLTAGE = 0.2;
     public static final double MIN_UPDATE_DT = 0.005;

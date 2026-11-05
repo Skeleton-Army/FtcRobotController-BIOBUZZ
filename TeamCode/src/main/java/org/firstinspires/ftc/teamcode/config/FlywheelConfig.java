@@ -23,7 +23,7 @@ public class FlywheelConfig {
     public static double INITIAL_RAMP_DURATION = 0.5;
 
     // --- Safety ---
-    public static double STALL_TIMEOUT = 1.0;
+    public static double STALL_TIMEOUT = 3;
     public static double RPM_REACHED_THRESHOLD = 50;
     public static double WRONG_DIRECTION_RPM_THRESHOLD = 500;
     public static double STALL_TARGET_RPM_THRESHOLD = 1000;
