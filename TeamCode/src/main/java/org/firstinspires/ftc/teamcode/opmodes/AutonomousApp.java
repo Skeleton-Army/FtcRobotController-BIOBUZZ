@@ -37,7 +37,8 @@ public class AutonomousApp extends CommandOpMode {
     private Path scorePathClose;
     private Path collectPath;
     private Path scorePathFar;
-    private Path parkPath;
+    private Path parkPathClose;
+    private Path parkPathFar;
 
     private final Pose shootCloseStartPose = new Pose(63.3, 8.8925, Math.toRadians(180));
     private final Pose shootFarStartPose = new Pose(63.1075, 135.1075, Math.toRadians(180));
@@ -50,7 +51,7 @@ public class AutonomousApp extends CommandOpMode {
     private final Pose scoreCloseControlPoint = new Pose(35, 53);
     private final Pose scoreFarControlPoint = new Pose(22, 120);
     private final Pose parkPoseCornerSide = new Pose(17 , 121, 0);
-    private final Pose parkPoseFlowerSide = new Pose(16.5, 95, Math.toRadians(270));
+    private final Pose parkPoseFlowerSide = new Pose(16, 95, Math.toRadians(270));
 
     private final Pose hiveUpScorePose = new Pose(63.1075, 125, Math.toRadians(180));
 
@@ -64,7 +65,8 @@ public class AutonomousApp extends CommandOpMode {
         scorePathClose = getScorePathClose(alliance);
         collectPath = getCollectPath(alliance);
         scorePathFar = getScorePathFar(alliance);
-        parkPath = getParkPath(alliance, parking);
+        parkPathClose = getParkPathShootClose(alliance, parking);
+        parkPathFar = getParkPathShootFar(alliance, parking);
 
         if (startPosition == StartPosition.SHOOT_CLOSE){
             follower.setPose(changeAlliance(shootCloseStartPose, alliance));
@@ -95,7 +97,7 @@ public class AutonomousApp extends CommandOpMode {
                         new InstantCommand(), // shoot
                         new WaitCommand(1500),
 
-                        new FollowPathCommand(follower, parkPath),
+                        new FollowPathCommand(follower, parkPathClose),
                         new WaitCommand(1000)
                 )
         );
@@ -108,7 +110,7 @@ public class AutonomousApp extends CommandOpMode {
                         new InstantCommand(), // shoot
                         new WaitCommand(1500),
 
-                        new FollowPathCommand(follower, parkPath),
+                        new FollowPathCommand(follower, parkPathFar),
                         new WaitCommand(1000)
                 )
         );
@@ -125,7 +127,7 @@ public class AutonomousApp extends CommandOpMode {
                         new InstantCommand(), // shoot
                         new WaitCommand(1500),
 
-                        new FollowPathCommand(follower, parkPath),
+                        new FollowPathCommand(follower, parkPathClose),
                         new WaitCommand(1000)
                 )
         );
@@ -206,7 +208,7 @@ public class AutonomousApp extends CommandOpMode {
         ).constant(changeAlliance(collectPose, alliance));
     }
 
-    private Path getParkPath(Alliance alliance, Parking parking) {
+    private Path getParkPathShootClose(Alliance alliance, Parking parking) {
         if (parking == Parking.CORNER_SIDE) {
             return line(
                     changeAlliance(scorePoseFar, alliance),
@@ -218,6 +220,21 @@ public class AutonomousApp extends CommandOpMode {
                     changeAlliance(scorePoseFar, alliance),
                     changeAlliance(parkPoseFlowerSide, alliance)
             ).linear(changeAlliance(collectPose, alliance), changeAlliance(parkPoseFlowerSide, alliance));
+        }
+        return null;
+    }
+    private Path getParkPathShootFar(Alliance alliance, Parking parking) {
+        if (parking == Parking.CORNER_SIDE) {
+            return line(
+                    changeAlliance(hiveUpScorePose, alliance),
+                    changeAlliance(parkPoseCornerSide, alliance)
+            ).linear(changeAlliance(shootFarStartPose, alliance) , changeAlliance(parkPoseCornerSide, alliance));
+        }
+        else if (parking == Parking.FLOWER_SIDE){
+            return line(
+                    changeAlliance(scorePoseFar, alliance),
+                    changeAlliance(parkPoseFlowerSide, alliance)
+            ).linear(changeAlliance(shootFarStartPose, alliance), changeAlliance(parkPoseFlowerSide, alliance));
         }
         return null;
     }
@@ -237,8 +254,8 @@ public class AutonomousApp extends CommandOpMode {
     @Override
     public void initialize() {
         prompter.prompt("alliance", new OptionPrompt<>("SELECT ALLIANCE", Alliance.RED, Alliance.BLUE))
-                .prompt("parking", new OptionPrompt<>("SELECT PARKING LOCATION", Parking.CORNER_SIDE, Parking.FLOWER_SIDE))
                 .prompt("startPose", new OptionPrompt<>("SELECT START POSE", StartPosition.SHOOT_CLOSE, StartPosition.SHOOT_FAR, StartPosition.GARDEN))
+                .prompt("parking", new OptionPrompt<>("SELECT PARKING LOCATION", Parking.CORNER_SIDE, Parking.FLOWER_SIDE))
                 .onComplete(this::afterPromptsInitialize)
                 .showSummary();
 
