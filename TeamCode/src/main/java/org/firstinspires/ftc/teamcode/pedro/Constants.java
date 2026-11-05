@@ -28,6 +28,7 @@ public class Constants {
         c.frontRightDirection.set(DcMotorSimple.Direction.FORWARD);
         c.backLeftDirection.set(DcMotorSimple.Direction.REVERSE);
         c.backRightDirection.set(DcMotorSimple.Direction.FORWARD);
+        c.manualBrakeMode.set(true);
     });
 
     public static PinpointConfig localizerConfig = new PinpointConfig(c -> {
@@ -75,6 +76,7 @@ public class Constants {
                 new Mecanum(h, drivetrainConfig),
                 new Foresight(foresightConfig)
         );
+
     }
 
     /**
