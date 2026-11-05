@@ -7,6 +7,9 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.hardware.servos.ServoEx;
 
+/**
+ * Subsystem placeholder for controlling the shooter hood angle (vertical launch pitch).
+ */
 public class Hood extends SubsystemBase {
     private final ServoEx hood;
 

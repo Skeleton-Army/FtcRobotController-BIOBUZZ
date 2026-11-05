@@ -9,9 +9,10 @@ import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.controller.PIDController;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.skeletonarmy.marrow.TimerEx;
-import java.util.concurrent.TimeUnit;
-import org.firstinspires.ftc.teamcode.utils.MathUtilities;
+
 import org.firstinspires.ftc.teamcode.utils.MovingAverage;
+
+import java.util.concurrent.TimeUnit;
 
 public class Flywheel extends SubsystemBase {
     private final MotorEx flywheel;
