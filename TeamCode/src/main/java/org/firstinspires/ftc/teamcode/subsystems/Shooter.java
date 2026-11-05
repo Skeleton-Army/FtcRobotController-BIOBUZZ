@@ -6,8 +6,6 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
-import com.skeletonarmy.marrow.OpModeManager;
-
 import org.firstinspires.ftc.teamcode.consts.HivePositions;
 
 public class Shooter extends SubsystemBase {
@@ -53,7 +51,7 @@ public class Shooter extends SubsystemBase {
         return Math.abs(flywheel.getTargetRPM() - flywheel.filteredRPM) <= RPM_REACHED_THRESHOLD;
     }
 
-    public boolean readyToShoot() {
+    public boolean isReadyToShoot() {
         return turret.reachedAngle() && flywheelAtTarget();
     }
 
