@@ -65,8 +65,7 @@ public class Turret extends SubsystemBase {
             return;
         }
 
-
-        setTargetAngle(calculateTargetAngle(targetPose, follower.pose()));
+        setTargetAngle(getTargetAngle());
         updateTurretPID();
     }
 
@@ -77,6 +76,9 @@ public class Turret extends SubsystemBase {
 
     public double getAngle(AngleUnit angleUnit) {
         return angleUnit == AngleUnit.DEGREES ? Math.toDegrees(getAngle()) : getAngle();
+    }
+    public double getTargetAngle(AngleUnit angleUnit) {
+        return angleUnit == AngleUnit.DEGREES ? Math.toDegrees(getTargetAngle()) : getTargetAngle();
     }
 
     public void resetTurret() {
@@ -230,7 +232,7 @@ public class Turret extends SubsystemBase {
     }
 
     private double computeStaticComp(double totalRequest) {
-        if (Math.abs(totalRequest) > TURRET_MIN_VOLTAGE) {
+        if (Math.abs(totalRequest) >= TURRET_MIN_VOLTAGE) {
             return (totalRequest > 0) ? TURRET_KS : -TURRET_KS;
         }
         return 0;
@@ -281,7 +283,9 @@ public class Turret extends SubsystemBase {
 
         return false;
     }
-
+    private double getTargetAngle(){
+        return calculateTargetAngle(targetPose, follower.pose());
+    }
     public void setTargetPose(Pose target) {
         targetPose = target;
     }
