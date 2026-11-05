@@ -11,6 +11,7 @@ public class FlywheelConfig {
     public static double FLYWHEEL_GEAR_RATIO = 1.0;
 
     // --- PID / Feedforward ---
+    public static double NOMINAL_VOLTAGE = 12.0;
     public static double FLYWHEEL_KP = 0.06;
     public static double FLYWHEEL_KI = 0;
     public static double FLYWHEEL_KD = 0;
@@ -24,9 +25,16 @@ public class FlywheelConfig {
     // --- Safety ---
     public static double STALL_TIMEOUT = 1.0;
     public static double RPM_REACHED_THRESHOLD = 50;
+    public static double WRONG_DIRECTION_RPM_THRESHOLD = 500;
+    public static double STALL_TARGET_RPM_THRESHOLD = 1000;
+    public static double STALL_ACTUAL_RPM_THRESHOLD = 200;
 
     // --- Filtering ---
     public static int RPM_WINDOW_SIZE = 5;
     public static double FLYWHEEL_ACCEL_FILTER_ALPHA = 0.3;
+    public static double MIN_DT_SECONDS = 0.001;
 
+    // --- Unit conversions ---
+    public static final double SECONDS_PER_MINUTE = 60.0;
+    public static final double NANOS_PER_SECOND = 1.0e9;
 }

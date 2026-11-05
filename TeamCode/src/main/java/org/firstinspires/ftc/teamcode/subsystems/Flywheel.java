@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.firstinspires.ftc.teamcode.config.FlywheelConfig.*;
-import static org.firstinspires.ftc.teamcode.utils.MathUtilities.lowPassFilter;
 
 import androidx.core.math.MathUtils;
 
@@ -12,17 +11,17 @@ import com.seattlesolvers.solverslib.controller.PIDController;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.skeletonarmy.marrow.TimerEx;
 
+import org.firstinspires.ftc.teamcode.utils.MathUtilities;
+
 import java.util.concurrent.TimeUnit;
 
 public class Flywheel extends SubsystemBase {
     private final MotorEx flywheel;
     private final PIDController flywheelPID;
-    private double voltage = 12;
+    private double voltage = NOMINAL_VOLTAGE;
     private double targetTPS;
     private double lastSpeedFlywheel = 0;
     private long lastLoopTime = 0;
-    private boolean isBraking = false;
-
     private final TimerEx rampTimer;
     private final TimerEx stallTimer;
 
@@ -73,24 +72,24 @@ public class Flywheel extends SubsystemBase {
         double targetRPM = Math.abs(getTargetRPM());
 
         // 1. Encoder Direction Check
-        if ((getRPM() < -500 && targetRPM > 0) || (getRPM() > 500 && targetRPM < 0)) {
+        if ((getRPM() < -WRONG_DIRECTION_RPM_THRESHOLD && targetRPM > 0)
+                || (getRPM() > WRONG_DIRECTION_RPM_THRESHOLD && targetRPM < 0)) {
             RobotLog.addGlobalWarningMessage("FLYWHEEL IS SPINNING IN THE WRONG DIRECTION.");
             return true;
         }
 
         // 2. Conflict/Stall Check
-        boolean isStalling = targetRPM > 1000 && currentRPM < 200;
+        boolean isStalling = targetRPM > STALL_TARGET_RPM_THRESHOLD
+                && currentRPM < STALL_ACTUAL_RPM_THRESHOLD;
 
         if (isStalling) {
             stallTimer.start();
-            stallTimer.resume();
 
             if (stallTimer.getElapsed() > STALL_TIMEOUT) {
                 RobotLog.addGlobalWarningMessage("FLYWHEEL STALL DETECTED. ONE OF THE FLYWHEEL MOTORS IS PROBABLY REVERSED.");
                 return true;
             }
         } else {
-            stallTimer.restart();
             stallTimer.pause();
         }
 
@@ -99,7 +98,7 @@ public class Flywheel extends SubsystemBase {
 
     public double getRPM() {
         double motorTPS = flywheel.getCorrectedVelocity();
-        return (motorTPS * 60.0) / flywheel.getCPR();
+        return (motorTPS * SECONDS_PER_MINUTE) / flywheel.getCPR();
     }
 
     public double getFilteredRPMAccel() {
@@ -107,12 +106,12 @@ public class Flywheel extends SubsystemBase {
     }
 
     public double getTargetRPM() {
-        return (targetTPS * 60.0) / flywheel.getCPR();
+        return (targetTPS * SECONDS_PER_MINUTE) / flywheel.getCPR();
     }
 
     public void setRPM(double rpm) {
         rpm = MathUtils.clamp(rpm, 0, flywheel.getMaxRPM());
-        this.targetTPS = (rpm * flywheel.getCPR()) / 60.0;
+        this.targetTPS = (rpm * flywheel.getCPR()) / SECONDS_PER_MINUTE;
     }
 
     public void updateVoltage(double voltage) {
@@ -149,11 +148,11 @@ public class Flywheel extends SubsystemBase {
             lastFilteredRPM = filteredRPM;
         }
 
-        double dt = (currentTime - lastFilteredRPMTime) / 1e9;
-        if (dt < 0.001) dt = 0.001;
+        double dt = (currentTime - lastFilteredRPMTime) / NANOS_PER_SECOND;
+        if (dt < MIN_DT_SECONDS) dt = MIN_DT_SECONDS;
 
         double rawAccel = (filteredRPM - lastFilteredRPM) / dt; // RPM/s
-        filteredRPMAccel = lowPassFilter(rawAccel, filteredRPMAccel, FLYWHEEL_ACCEL_FILTER_ALPHA);
+        filteredRPMAccel = MathUtilities.lowPassFilter(rawAccel, filteredRPMAccel, FLYWHEEL_ACCEL_FILTER_ALPHA);
 
         lastFilteredRPM = filteredRPM;
         lastFilteredRPMTime = currentTime;
@@ -172,9 +171,9 @@ public class Flywheel extends SubsystemBase {
         // 1. Calculate real Delta Time (dt)
         long currentTime = System.nanoTime();
         if (lastLoopTime == 0) lastLoopTime = currentTime;
-        double dt = (currentTime - lastLoopTime) / 1.0e9;
+        double dt = (currentTime - lastLoopTime) / NANOS_PER_SECOND;
         lastLoopTime = currentTime;
-        if (dt < 0.001) dt = 0.001;
+        if (dt < MIN_DT_SECONDS) dt = MIN_DT_SECONDS;
 
         if (!rampTimer.isOn()) rampTimer.resume();
         double rampMultiplier = Math.min(rampTimer.getElapsed() / INITIAL_RAMP_DURATION, 1.0);
@@ -182,7 +181,7 @@ public class Flywheel extends SubsystemBase {
         // 'speed' is our Target Velocity
         double speed = targetTPS * rampMultiplier;
 
-        double tpsPerRPM = flywheel.getCPR() / 60.0;
+        double tpsPerRPM = flywheel.getCPR() / SECONDS_PER_MINUTE;
         double processVariable = filteredRPM * tpsPerRPM;
 
         flywheelPID.setPID(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
@@ -206,5 +205,4 @@ public class Flywheel extends SubsystemBase {
 
         flywheel.set(desiredVoltage / voltage);
     }
-
 }
