@@ -6,11 +6,11 @@ import com.pedropathing.math.Pose;
 public class HivePositions {
     private final static double FIELD_LENGTH = 144;
     private final static double HIVE_X = 57.5;
-
-    public final static Pose AUDIENCE_HIVE = new Pose(HIVE_X,55);
-    public final static Pose REAR_HIVE = new Pose(HIVE_X, FIELD_LENGTH - AUDIENCE_HIVE.y());
-
+    private final static double HIVE_Y = 55;
     //todo: fix hive positions ^^^
+
+    public final static Pose AUDIENCE_HIVE = new Pose(HIVE_X, HIVE_Y);
+    public final static Pose REAR_HIVE = new Pose(HIVE_X, FIELD_LENGTH - HIVE_Y);
 
     public static Pose getHivePose(Follower follower){
         if (follower.pose().y() < 72)
