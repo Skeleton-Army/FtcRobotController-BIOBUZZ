@@ -259,8 +259,14 @@ public class Turret extends SubsystemBase {
         turretPID.setSetPoint(wrapped);
     }
 
-    private boolean isTurretDamaged(){
-        boolean isStalling = calculateTargetAngle(targetPose,follower.pose()) - getAngle() > ANGLE_DIFFERENCE_THRESHOLD;
+    private boolean isTurretDamaged() {
+        boolean motorTryingToMove =
+                Math.abs(turret.getRawPower()) > STALL_MIN_POWER;
+
+        boolean turretNotMoving =
+                Math.abs(turret.getVelocity()) < STALL_MIN_VELOCITY;
+
+        boolean isStalling = motorTryingToMove && turretNotMoving;
 
         if (isStalling) {
             stallTimer.start();
@@ -272,6 +278,7 @@ public class Turret extends SubsystemBase {
         } else {
             stallTimer.pause();
         }
+
         return false;
     }
 

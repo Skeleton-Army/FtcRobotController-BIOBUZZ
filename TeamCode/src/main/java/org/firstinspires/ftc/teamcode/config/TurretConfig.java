@@ -18,7 +18,6 @@ public class TurretConfig {
     public static double TURRET_KS = 0;
     public static double TURRET_DERIVATIVE_GAIN = 0;
     public static double TURRET_SECOND_DERIVATIVE_GAIN = 0;
-    public static final double MIN_FLYWHEEL_RPM = 0;
     public static double TURRET_IZONE = Math.toRadians(30);
     public static double TURRET_MIN_VOLTAGE = 0.2;
     public static final double MIN_UPDATE_DT = 0.005;
@@ -40,6 +39,7 @@ public class TurretConfig {
     public static double TURRET_OFFSET_Y = 0;
 
     // -- Safety --
-    public static double ANGLE_DIFFERENCE_THRESHOLD = Math.toRadians(60);
-    public static double TRAVEL_TIME_THRESHOLD = 1;
+    public static double STALL_MIN_VELOCITY = 0.05;
+    public static double STALL_MIN_POWER = 0.3;
+    public static double TRAVEL_TIME_THRESHOLD = 0.5;
 }
