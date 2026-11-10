@@ -21,7 +21,7 @@
 
         <LynxModule name="Expansion Hub 2" port="2">
             <goBILDA5202SeriesMotor name="turret" port="3" />
-            <goBILDA5202SeriesMotor name="flyWheel" port="1" />
+            <goBILDA5202SeriesMotor name="flywheel" port="1" />
         </LynxModule>
     </LynxUsbDevice>
 </Robot>
