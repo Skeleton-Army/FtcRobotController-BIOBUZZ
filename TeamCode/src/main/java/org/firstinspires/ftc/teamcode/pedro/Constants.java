@@ -105,24 +105,6 @@ public class Constants {
         );
     }
 
-    public static Follower createSecondary(HardwareMap h, PinpointLocalizer.ResetMode resetMode) {
-        secondaryLocalizerConfig.resetMode.set(resetMode);
-
-        return new Follower(
-                new PinpointLocalizer(h, secondaryLocalizerConfig),
-                new Mecanum(h, secondaryDrivetrainConfig),
-                new Foresight(secondaryForesightConfig)
-        );
-    }
-
-    /**
-     * Default follower creation method.
-     */
-    @NonNull
-    public static Follower create(HardwareMap h) {
-        return create(h, PinpointLocalizer.ResetMode.RECALIBRATE_IMU);
-    }
-
     /**
      * Default follower creation method.
      */
