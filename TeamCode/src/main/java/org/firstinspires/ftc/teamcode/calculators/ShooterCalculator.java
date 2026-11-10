@@ -10,8 +10,10 @@ public interface ShooterCalculator {
     /**
      * Calculates the target shooter solution given a distance parameter.
      *
-     * @param distance Distance to the target in standard length units (e.g., inches or meters)
      * @return Calculated {@link ShooterSolution} holding RPM, turret angle, and hood angle
      */
-    ShooterSolution calculate(double distance);
+    ShooterSolution calculate(double robotX, double robotY, double robotHeading,
+                              double goalX, double goalY,
+                              double robotVelocityX, double robotVelocityY,
+                              double currentFlywheelRpm);
 }
