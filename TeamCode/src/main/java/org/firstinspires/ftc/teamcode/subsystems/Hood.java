@@ -13,8 +13,8 @@ public class Hood extends SubsystemBase {
 
     public Hood(final HardwareMap hardwareMap) {
         super();
-        // Measurements given by hardware, if problem blame Tsipi.
-        hood = new ServoEx(hardwareMap, HOOD_NAME, HOOD_POSSIBLE_MIN, HOOD_POSSIBLE_MAX);
+        // Measurements given by hardware, if problem blame Tzipi.
+        hood = new ServoEx(hardwareMap, HOOD_NAME);
     }
 
     public double getRawHoodPosition() {

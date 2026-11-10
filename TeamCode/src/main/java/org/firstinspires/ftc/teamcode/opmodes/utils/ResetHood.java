@@ -15,7 +15,7 @@ public class ResetHood extends CommandOpMode {
 
     @Override
     public void initialize() {
-        this.hood = new ServoEx(hardwareMap, "hood", HoodConfig.HOOD_POSSIBLE_MIN, HoodConfig.HOOD_POSSIBLE_MAX);
+        this.hood = new ServoEx(hardwareMap, "hood");
         this.gamepadEx = new GamepadEx(gamepad1);
         gamepadEx.getGamepadButton(GamepadKeys.Button.A)
                 .whenActive(() -> hood.set(HoodConfig.HOOD_POSSIBLE_MIN));
