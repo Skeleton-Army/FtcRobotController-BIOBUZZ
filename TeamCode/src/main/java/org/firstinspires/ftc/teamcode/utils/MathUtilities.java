@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.utils;
 
-import com.seattlesolvers.solverslib.util.MathUtils;
-
 public class MathUtilities {
     private MathUtilities() {}
 

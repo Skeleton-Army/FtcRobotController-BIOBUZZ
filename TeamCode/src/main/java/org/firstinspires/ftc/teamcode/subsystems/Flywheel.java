@@ -3,17 +3,14 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import static org.firstinspires.ftc.teamcode.config.FlywheelConfig.*;
 
 import androidx.core.math.MathUtils;
-
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.RobotLog;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.controller.PIDController;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.skeletonarmy.marrow.TimerEx;
-
-import org.firstinspires.ftc.teamcode.utils.MathUtilities;
-
 import java.util.concurrent.TimeUnit;
+import org.firstinspires.ftc.teamcode.utils.MathUtilities;
 
 public class Flywheel extends SubsystemBase {
     private final MotorEx flywheel;
@@ -37,7 +34,9 @@ public class Flywheel extends SubsystemBase {
 
     public Flywheel(final HardwareMap hardwareMap) {
         super();
-        flywheel = new MotorEx(hardwareMap, FLYWHEEL_NAME,
+        flywheel = new MotorEx(
+                hardwareMap,
+                FLYWHEEL_NAME,
                 FLYWHEEL_MOTOR.getCPR() * FLYWHEEL_GEAR_RATIO,
                 FLYWHEEL_MOTOR.getRPM() / FLYWHEEL_GEAR_RATIO);
         flywheel.setInverted(FLYWHEEL_INVERTED);
@@ -79,14 +78,14 @@ public class Flywheel extends SubsystemBase {
         }
 
         // 2. Conflict/Stall Check
-        boolean isStalling = targetRPM > STALL_TARGET_RPM_THRESHOLD
-                && currentRPM < STALL_ACTUAL_RPM_THRESHOLD;
+        boolean isStalling = targetRPM > STALL_TARGET_RPM_THRESHOLD && currentRPM < STALL_ACTUAL_RPM_THRESHOLD;
 
         if (isStalling) {
             stallTimer.start();
 
             if (stallTimer.getElapsed() > STALL_TIMEOUT) {
-                RobotLog.addGlobalWarningMessage("FLYWHEEL STALL DETECTED. ONE OF THE FLYWHEEL MOTORS IS PROBABLY REVERSED.");
+                RobotLog.addGlobalWarningMessage(
+                        "FLYWHEEL STALL DETECTED. ONE OF THE FLYWHEEL MOTORS IS PROBABLY REVERSED.");
                 return true;
             }
         } else {
@@ -194,9 +193,7 @@ public class Flywheel extends SubsystemBase {
         double pid = flywheelPID.calculate(processVariable, speed);
 
         // Feedforward calculates based on TARGET (speed), not measurement
-        double ff = (FLYWHEEL_KS * Math.signum(speed)) +
-                (FLYWHEEL_KV * speed) +
-                (currentKA * targetAcceleration);
+        double ff = (FLYWHEEL_KS * Math.signum(speed)) + (FLYWHEEL_KV * speed) + (currentKA * targetAcceleration);
 
         lastSpeedFlywheel = speed;
 

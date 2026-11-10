@@ -5,7 +5,6 @@ import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.hardware.servos.ServoEx;
-
 import org.firstinspires.ftc.teamcode.config.HoodConfig;
 
 @Utility
@@ -17,8 +16,7 @@ public class ResetHood extends CommandOpMode {
     public void initialize() {
         this.hood = new ServoEx(hardwareMap, "hood");
         this.gamepadEx = new GamepadEx(gamepad1);
-        gamepadEx.getGamepadButton(GamepadKeys.Button.A)
-                .whenActive(() -> hood.set(HoodConfig.HOOD_POSSIBLE_MIN));
+        gamepadEx.getGamepadButton(GamepadKeys.Button.A).whenActive(() -> hood.set(HoodConfig.HOOD_POSSIBLE_MIN));
     }
 
     @Override

@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import static org.firstinspires.ftc.teamcode.config.HoodConfig.*;
 
 import androidx.core.math.MathUtils;
-
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.hardware.servos.ServoEx;
@@ -66,6 +65,4 @@ public class Hood extends SubsystemBase {
 
         hood.set(targetPos);
     }
-
-
 }

@@ -1,4 +1,5 @@
 package org.firstinspires.ftc.teamcode.subsystems;
+
 import static org.firstinspires.ftc.teamcode.config.TurretConfig.*;
 
 import com.pedropathing.follower.Follower;
@@ -11,11 +12,9 @@ import com.seattlesolvers.solverslib.controller.PIDController;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.seattlesolvers.solverslib.util.MathUtils;
 import com.skeletonarmy.marrow.TimerEx;
-
+import java.util.concurrent.TimeUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.utils.MathUtilities;
-
-import java.util.concurrent.TimeUnit;
 
 public class Turret extends SubsystemBase {
     private final MotorEx turret;
@@ -37,7 +36,7 @@ public class Turret extends SubsystemBase {
 
     public Turret(final HardwareMap hardwareMap, final Follower follower) {
         super();
-        turret = new MotorEx(hardwareMap,TURRET_NAME, TURRET_MOTOR);
+        turret = new MotorEx(hardwareMap, TURRET_NAME, TURRET_MOTOR);
         turret.setRunMode(MotorEx.RunMode.RawPower);
         turret.setZeroPowerBehavior(MotorEx.ZeroPowerBehavior.BRAKE);
         turret.setDistancePerPulse((Math.PI * 2) / (turret.getCPR() * GEAR_RATIO));
@@ -71,7 +70,6 @@ public class Turret extends SubsystemBase {
         updateTurretPID();
     }
 
-
     public boolean reachedAngle() {
         return turretPID.atSetPoint();
     }
@@ -79,6 +77,7 @@ public class Turret extends SubsystemBase {
     public double getAngle(AngleUnit angleUnit) {
         return angleUnit == AngleUnit.DEGREES ? Math.toDegrees(getAngle()) : getAngle();
     }
+
     public double getTargetAngle(AngleUnit angleUnit) {
         return angleUnit == AngleUnit.DEGREES ? Math.toDegrees(getTargetAngle()) : getTargetAngle();
     }
@@ -145,7 +144,8 @@ public class Turret extends SubsystemBase {
 
     private void updateFilteredKinematics(double rawTargetVel, double rawTargetAccel) {
         filteredTargetVel = MathUtilities.lowPassFilter(rawTargetVel, filteredTargetVel, TURRET_DERIVATIVE_GAIN);
-        filteredTargetAccel = MathUtilities.lowPassFilter(rawTargetAccel, filteredTargetAccel, TURRET_SECOND_DERIVATIVE_GAIN);
+        filteredTargetAccel =
+                MathUtilities.lowPassFilter(rawTargetAccel, filteredTargetAccel, TURRET_SECOND_DERIVATIVE_GAIN);
     }
 
     private double[] computeNetMotion() {
@@ -153,6 +153,7 @@ public class Turret extends SubsystemBase {
         double netAccel = filteredTargetAccel;
         return new double[] {netVel, netAccel};
     }
+
     private double[] zeroKinematics() {
         return new double[] {0, 0};
     }
@@ -161,7 +162,9 @@ public class Turret extends SubsystemBase {
         lastTargetAngle = angle;
         lastTargetUpdateTime = time;
     }
-    private double wrapToTarget(double current, double target, double min, double max, boolean wrap, double lastCommanded) {
+
+    private double wrapToTarget(
+            double current, double target, double min, double max, boolean wrap, double lastCommanded) {
         double delta = Math.atan2(Math.sin(target - current), Math.cos(target - current));
         double closest = current + delta;
 
@@ -243,6 +246,7 @@ public class Turret extends SubsystemBase {
     private double clampVoltage(double desiredVoltage) {
         return Math.max(-voltage, Math.min(voltage, desiredVoltage));
     }
+
     private double calculateTargetAngle(Pose targetPose, Pose robotPose) {
         double heading = robotPose.heading();
         double turretX = robotPose.x() + TURRET_OFFSET_X * Math.cos(heading) - TURRET_OFFSET_Y * Math.sin(heading);
@@ -264,11 +268,9 @@ public class Turret extends SubsystemBase {
     }
 
     private boolean isTurretDamaged() {
-        boolean motorTryingToMove =
-                Math.abs(turret.getRawPower()) > STALL_MIN_POWER;
+        boolean motorTryingToMove = Math.abs(turret.getRawPower()) > STALL_MIN_POWER;
 
-        boolean turretNotMoving =
-                Math.abs(turret.getVelocity()) < STALL_MIN_VELOCITY;
+        boolean turretNotMoving = Math.abs(turret.getVelocity()) < STALL_MIN_VELOCITY;
 
         boolean isStalling = motorTryingToMove && turretNotMoving;
 
@@ -285,9 +287,11 @@ public class Turret extends SubsystemBase {
 
         return false;
     }
-    private double getTargetAngle(){
+
+    private double getTargetAngle() {
         return calculateTargetAngle(targetPose, follower.pose());
     }
+
     public void setTargetPose(Pose target) {
         targetPose = target;
     }

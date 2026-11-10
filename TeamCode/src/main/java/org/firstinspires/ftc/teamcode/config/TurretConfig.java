@@ -7,7 +7,7 @@ import com.seattlesolvers.solverslib.hardware.motors.Motor;
 public class TurretConfig {
     public static String TURRET_NAME = "turret";
     public static Motor.GoBILDA TURRET_MOTOR = Motor.GoBILDA.RPM_1150;
-    public static double GEAR_RATIO = (double) 111 / 11; //TODO: set turret gear ratio
+    public static double GEAR_RATIO = (double) 111 / 11; // TODO: set turret gear ratio
 
     // --- PID ---
     public static double TURRET_KP = 12;

@@ -36,7 +36,7 @@ public class Shooter extends SubsystemBase {
         flywheel.setRPM(rpm);
     }
 
-    public void setTarget(double hoodAngleRad, double rpm){
+    public void setTarget(double hoodAngleRad, double rpm) {
         turret.setTargetPose(HivePositions.getHivePose(follower));
         hood.setVerticalAngle(hoodAngleRad);
         flywheel.setRPM(rpm);
