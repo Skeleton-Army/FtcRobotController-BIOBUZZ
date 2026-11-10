@@ -59,9 +59,11 @@ public class Turret extends SubsystemBase {
     @Override
     public void periodic() {
 
-        if (isTurretDamaged() && !emergencyStop || disabled) {
-            turret.stopMotor();
+        if (!emergencyStop && isTurretDamaged()) {
             emergencyStop = true;
+        }
+        if (emergencyStop || disabled) {
+            turret.stopMotor();
             return;
         }
 
