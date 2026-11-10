@@ -8,7 +8,7 @@ import org.psilynx.psikit.ftc.autolog.PsiKitAutoLogSettings;
 public final class PsiKitConfig {
     @OnCreateEventLoop
     public static void configure(Context context, FtcEventLoop ftcEventLoop) {
-        PsiKitAutoLogSettings.enabledByDefault = true;
+        PsiKitAutoLogSettings.enabledByDefault = false;
         PsiKitAutoLogSettings.enableLinearByDefault = true;
     }
 }
