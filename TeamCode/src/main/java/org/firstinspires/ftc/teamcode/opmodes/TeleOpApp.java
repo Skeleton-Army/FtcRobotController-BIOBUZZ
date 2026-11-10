@@ -10,12 +10,9 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.skeletonarmy.marrow.LynxUtil;
-import com.skeletonarmy.marrow.telemetry.MarrowTelemetry;
-
-import org.firstinspires.ftc.teamcode.R;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@TeleOp(name="TeleOp")
+@TeleOp(name = "TeleOp")
 public class TeleOpApp extends CommandOpMode {
     private DcMotorEx flywheel;
     private Follower follower;
@@ -35,12 +32,7 @@ public class TeleOpApp extends CommandOpMode {
         LynxUtil.clearBulkCache(hardwareMap);
 
         telemetry.addData("pos", flywheel.getCurrentPosition());
-        ManualDrive.driveOrHold(
-                follower,
-                -gamepad1.left_stick_y,
-                -gamepad1.left_stick_x,
-                -gamepad1.right_stick_x
-        );
+        ManualDrive.driveOrHold(follower, -gamepad1.left_stick_y, -gamepad1.left_stick_x, -gamepad1.right_stick_x);
         follower.update();
         telemetry.update();
     }
