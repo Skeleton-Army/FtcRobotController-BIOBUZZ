@@ -30,7 +30,7 @@ public class FlywheelConfig {
     public static double STALL_ACTUAL_RPM_THRESHOLD = 200;
 
     // --- Filtering ---
-    public static int RPM_WINDOW_SIZE = 5;
+    public static final int RPM_WINDOW_SIZE = 5;
     public static double FLYWHEEL_ACCEL_FILTER_ALPHA = 0.3;
     public static double MIN_DT_SECONDS = 0.001;
 
