@@ -15,6 +15,7 @@ plugins {
     // Note for FTC Teams: Do not modify this yourself.
     id 'com.android.application' version '8.13.2' apply false
     id 'com.android.library' version '8.13.2' apply false
+    id 'com.diffplug.spotless' version '8.10.3' apply false
 }
 
 // This is now required because aapt2 has to be downloaded from the
@@ -28,4 +29,35 @@ allprojects {
 
 repositories {
     mavenCentral()
+}
+
+subprojects {
+    apply plugin: 'com.diffplug.spotless'
+
+    // Spotless: run `./gradlew spotlessApply` to format, `./gradlew spotlessCheck` to verify
+    // (spotlessCheck also runs as part of `check`)
+    spotless {
+        java {
+            // Explicit target, since Android source sets aren't picked up automatically
+            target 'src/**/*.java'
+            targetExclude '**/robotcontroller/**', '**/pedro/procedures/**'
+            palantirJavaFormat()
+            removeUnusedImports()
+            shortenFullyQualifiedTypes()
+            importOrder()
+            trimTrailingWhitespace()
+        }
+    }
+}
+
+tasks.register('spotlessCheck') {
+    group = 'spotless'
+    description = 'Runs spotless check on all modules which apply the spotless plugin.'
+    dependsOn(subprojects.collect { it.tasks.named('spotlessCheck') })
+}
+
+tasks.register('spotlessApply') {
+    group = 'spotless'
+    description = 'Runs spotless apply on all modules which apply the spotless plugin.'
+    dependsOn(subprojects.collect { it.tasks.named('spotlessApply') })
 }
