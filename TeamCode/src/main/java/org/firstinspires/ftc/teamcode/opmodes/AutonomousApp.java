@@ -7,10 +7,9 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.skeletonarmy.marrow.LynxUtil;
-
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name="Autonomous", preselectTeleOp="TeleOp")
+@Autonomous(name = "Autonomous", preselectTeleOp = "TeleOp")
 public class AutonomousApp extends CommandOpMode {
     private Follower follower;
 

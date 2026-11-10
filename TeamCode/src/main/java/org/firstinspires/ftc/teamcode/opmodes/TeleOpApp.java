@@ -18,7 +18,7 @@ import org.firstinspires.ftc.teamcode.R;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Shooter;
 
-@TeleOp(name="TeleOp")
+@TeleOp(name = "TeleOp")
 public class TeleOpApp extends CommandOpMode {
     private Follower follower;
     private Shooter shooter;
