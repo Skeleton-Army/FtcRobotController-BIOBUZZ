@@ -47,9 +47,9 @@ public class AutonomousApp extends CommandOpMode {
     private final Pose scorePoseClose = new Pose(63.3, 15, Math.toRadians(180));
     private final Pose collectPose = new Pose(13.5, 11.5, Math.toRadians(-95));
     private final Pose collectControlPoint = new Pose(30, 52, 0);
-    private final Pose scorePoseFar = new Pose(49, 120, Math.toRadians(45));
-    private final Pose scoreCloseControlPoint = new Pose(35, 53);
-    private final Pose scoreFarControlPoint = new Pose(22, 120);
+    private final Pose scorePoseFar = new Pose(49, 120, Math.toRadians(-125));
+    private final Pose scoreCloseControlPoint = new Pose(20, 67); //new Pose(35, 53);
+    private final Pose scoreFarControlPoint =  new Pose(10.4, 64); //new Pose(22, 120);
     private final Pose parkPoseCornerSide = new Pose(17 , 121, 0);
     private final Pose parkPoseFlowerSide = new Pose(16, 95, Math.toRadians(270));
 
@@ -205,7 +205,9 @@ public class AutonomousApp extends CommandOpMode {
                 changeAlliance(scoreCloseControlPoint, alliance),
                 changeAlliance(scoreFarControlPoint, alliance),
                 changeAlliance(scorePoseFar, alliance)
-        ).constant(changeAlliance(collectPose, alliance));
+        ).heading(Interpolator.piecewise()
+                .until(0.35, Interpolator.constant(changeAlliance(collectPose, alliance)))
+                .until(1.0000, Interpolator.linear(changeAlliance(collectPose, alliance),  changeAlliance(scorePoseFar, alliance))));
     }
 
     private Path getParkPathShootClose(Alliance alliance, Parking parking) {
@@ -213,7 +215,7 @@ public class AutonomousApp extends CommandOpMode {
             return line(
                     changeAlliance(scorePoseFar, alliance),
                     changeAlliance(parkPoseCornerSide, alliance)
-            ).linear(changeAlliance(collectPose, alliance) , changeAlliance(parkPoseCornerSide, alliance));
+            ).constant(changeAlliance(parkPoseCornerSide, alliance));
         }
         else if (parking == Parking.FLOWER_SIDE){
             return line(
@@ -258,7 +260,6 @@ public class AutonomousApp extends CommandOpMode {
                 .prompt("parking", new OptionPrompt<>("SELECT PARKING LOCATION", Parking.CORNER_SIDE, Parking.FLOWER_SIDE))
                 .onComplete(this::afterPromptsInitialize)
                 .showSummary();
-
 
         LynxUtil.setBulkCachingMode(hardwareMap, LynxModule.BulkCachingMode.MANUAL);
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
