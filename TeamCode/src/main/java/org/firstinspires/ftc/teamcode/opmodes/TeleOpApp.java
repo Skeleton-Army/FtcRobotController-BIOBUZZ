@@ -45,7 +45,7 @@ public class TeleOpApp extends CommandOpMode {
         telemetry.addData("turretAngle", shooter.getTurret().getAngle(AngleUnit.DEGREES));
         telemetry.addData("currentError", currentError);
         telemetry.addData("largestError", largestError);
-        shooter.setTarget(HivePositions.getHivePose(follower), Math.toRadians(35), 3000);
+        shooter.setTarget(HivePositions.getHivePose(follower.pose().y()), Math.toRadians(35), 3000);
         follower.update();
         telemetry.update();
     }
