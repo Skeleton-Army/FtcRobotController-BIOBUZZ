@@ -48,12 +48,14 @@ public class Flywheel extends SubsystemBase {
         flywheelPID = new PIDController(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
 
         rampTimer = new TimerEx(TimeUnit.SECONDS);
-        rampTimer.start();
+
         stallTimer = new TimerEx(TimeUnit.SECONDS);
     }
 
     @Override
     public void periodic() {
+        rampTimer.start();
+
         filteredRPM = getFilteredRpm(getRPM());
         updateFilteredRPMAccel();
 

@@ -51,16 +51,17 @@ public class Turret extends SubsystemBase {
         voltage = VoltageGetter.getInstance().getVoltage();
 
         startupTimer = new TimerEx(TimeUnit.SECONDS);
-        startupTimer.start();
         stallTimer = new TimerEx(TimeUnit.SECONDS);
     }
 
     @Override
     public void periodic() {
+        startupTimer.start();
 
         if (!emergencyStop && isTurretDamaged()) {
             emergencyStop = true;
         }
+
         if (emergencyStop || disabled) {
             turret.stopMotor();
             return;
