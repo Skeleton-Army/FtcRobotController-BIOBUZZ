@@ -11,6 +11,7 @@ import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.skeletonarmy.marrow.TimerEx;
 import java.util.concurrent.TimeUnit;
 import org.firstinspires.ftc.teamcode.utils.MathUtilities;
+import org.firstinspires.ftc.teamcode.utils.MovingAverage;
 
 public class Flywheel extends SubsystemBase {
     private final MotorEx flywheel;
@@ -25,14 +26,11 @@ public class Flywheel extends SubsystemBase {
     private static final double SECONDS_PER_MINUTE = 60.0;
     private static final double NANOS_PER_SECOND = 1.0e9;
     private static final int RPM_WINDOW_SIZE = 5;
-    private final double[] rpmBuffer = new double[RPM_WINDOW_SIZE];
-    private int bufferIndex = 0;
-    private double runningRpmSum = 0;
-    public double filteredRPM;
+    private final MovingAverage filteredRPM = new MovingAverage(RPM_WINDOW_SIZE);
     private double lastFilteredRPM = 0;
     private long lastFilteredRPMTime = 0;
     private double filteredRPMAccel = 0; // RPM/s, derived from filteredRPM
-    public boolean disabled = false;
+    private boolean disabled = false;
     private boolean emergencyStop = false;
 
     public Flywheel(final HardwareMap hardwareMap) {
@@ -59,7 +57,8 @@ public class Flywheel extends SubsystemBase {
     public void periodic() {
         rampTimer.start();
 
-        filteredRPM = getFilteredRpm(getRPM());
+        filteredRPM.update(getUnfilteredRPM());
+
         updateFilteredRPMAccel();
 
         if (isFlywheelDamaged() && !emergencyStop) {
@@ -100,11 +99,6 @@ public class Flywheel extends SubsystemBase {
         return false;
     }
 
-    public double getRPM() {
-        double motorTPS = flywheel.getCorrectedVelocity();
-        return (motorTPS * SECONDS_PER_MINUTE) / flywheel.getCPR();
-    }
-
     public double getFilteredRPMAccel() {
         return filteredRPMAccel;
     }
@@ -131,12 +125,8 @@ public class Flywheel extends SubsystemBase {
         disabled = false;
     }
 
-    public double getFilteredRpm(double currentRPM) {
-        runningRpmSum -= rpmBuffer[bufferIndex];
-        rpmBuffer[bufferIndex] = currentRPM;
-        runningRpmSum += currentRPM;
-        bufferIndex = (bufferIndex + 1) % RPM_WINDOW_SIZE;
-        return runningRpmSum / RPM_WINDOW_SIZE;
+    public double getRPM() {
+        return filteredRPM.get();
     }
 
     /**
@@ -149,16 +139,16 @@ public class Flywheel extends SubsystemBase {
 
         if (lastFilteredRPMTime == 0) {
             lastFilteredRPMTime = currentTime;
-            lastFilteredRPM = filteredRPM;
+            lastFilteredRPM = NOMINAL_VOLTAGE;
         }
 
         double dt = (currentTime - lastFilteredRPMTime) / NANOS_PER_SECOND;
         if (dt < MIN_DT_SECONDS) dt = MIN_DT_SECONDS;
 
-        double rawAccel = (filteredRPM - lastFilteredRPM) / dt; // RPM/s
+        double rawAccel = (NOMINAL_VOLTAGE - lastFilteredRPM) / dt; // RPM/s
         filteredRPMAccel = MathUtilities.lowPassFilter(rawAccel, filteredRPMAccel, FLYWHEEL_ACCEL_FILTER_ALPHA);
 
-        lastFilteredRPM = filteredRPM;
+        lastFilteredRPM = NOMINAL_VOLTAGE;
         lastFilteredRPMTime = currentTime;
     }
 
@@ -186,7 +176,7 @@ public class Flywheel extends SubsystemBase {
         double speed = targetTPS * rampMultiplier;
 
         double tpsPerRPM = flywheel.getCPR() / SECONDS_PER_MINUTE;
-        double processVariable = filteredRPM * tpsPerRPM;
+        double processVariable = getRPM() * tpsPerRPM;
 
         flywheelPID.setPID(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
 
@@ -206,5 +196,10 @@ public class Flywheel extends SubsystemBase {
         desiredVoltage = Math.max(-voltage, Math.min(voltage, desiredVoltage));
 
         flywheel.set(desiredVoltage / voltage);
+    }
+
+    private double getUnfilteredRPM() {
+        double motorTPS = flywheel.getCorrectedVelocity();
+        return (motorTPS * SECONDS_PER_MINUTE) / flywheel.getCPR();
     }
 }
