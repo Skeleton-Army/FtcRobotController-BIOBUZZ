@@ -4,6 +4,7 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
+import com.pedropathing.revhub.localizers.PinpointLocalizer;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
@@ -18,8 +19,7 @@ public class TeleOpApp extends CommandOpMode {
     public void initialize() {
         LynxUtil.setBulkCachingMode(hardwareMap, LynxModule.BulkCachingMode.MANUAL);
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
-
-        follower = Constants.createWithoutReset(hardwareMap);
+        follower = Constants.createPrimary(hardwareMap, PinpointLocalizer.ResetMode.NONE);
     }
 
     @Override
@@ -28,6 +28,7 @@ public class TeleOpApp extends CommandOpMode {
         LynxUtil.clearBulkCache(hardwareMap);
 
         ManualDrive.driveOrHold(follower, -gamepad1.left_stick_y, -gamepad1.left_stick_x, -gamepad1.right_stick_x);
+
         follower.update();
     }
 }
