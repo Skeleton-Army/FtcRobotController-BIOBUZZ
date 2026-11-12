@@ -21,7 +21,9 @@ public class Flywheel extends SubsystemBase {
     private long lastLoopTime = 0;
     private final TimerEx rampTimer;
     private final TimerEx stallTimer;
-
+    private static final double SECONDS_PER_MINUTE = 60.0;
+    private static final double NANOS_PER_SECOND = 1.0e9;
+    private static final int RPM_WINDOW_SIZE = 5;
     private final double[] rpmBuffer = new double[RPM_WINDOW_SIZE];
     private int bufferIndex = 0;
     private double runningRpmSum = 0;
