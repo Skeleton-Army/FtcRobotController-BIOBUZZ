@@ -25,6 +25,7 @@ public class TeleOpApp extends CommandOpMode {
     private Intake intake;
     private GamepadEx gamepad;
     private final Pose startPose = new Pose(0, 0, Math.toRadians(0));
+    private final Pose zeroPose = new Pose(0,0,0);
     private boolean previousButtonB = false;
     private long lastPressButtonB = 0;
     private boolean isHoldingIntake = false;
@@ -33,10 +34,10 @@ public class TeleOpApp extends CommandOpMode {
     private final int minThreshold = 150;
     private boolean currentButtonB;
 
-    private final Pose flowerRedGarden = new Pose(15, 48, Math.toRadians(180));
-    private final Pose flowerRedParking = new Pose(48, 130, Math.toRadians(90));
-    private final Pose flowerBlueGarden = new Pose(130, 96, Math.toRadians(0));
-    private final Pose flowerBlueParking = new Pose(96, 15, Math.toRadians(-90));
+    private final Pose flowerRedGarden = new Pose(8, 36, Math.toRadians(180));
+    private final Pose flowerRedParking = new Pose(36, 110, Math.toRadians(90));
+    private final Pose flowerBlueGarden = new Pose(110, 90, Math.toRadians(0));
+    private final Pose flowerBlueParking = new Pose(82, 10, Math.toRadians(-90));
 
     private Pose calculateClosestFlower(Follower follower){
         double robotX = follower.pose().x();
@@ -46,7 +47,7 @@ public class TeleOpApp extends CommandOpMode {
         double distanceBlueGarden = Math.hypot(flowerBlueGarden.x() - robotX, flowerBlueGarden.y() - robotY);
         double distanceBlueParking = Math.hypot(flowerBlueParking.x() - robotX, flowerBlueParking.y() - robotY);
 
-        if (48 <= robotX && robotX <= 96 && 36 <= robotY && 108 >= robotY) {
+        if (48 <= robotX && robotX <= 96 && 40 <= robotY && 104 >= robotY) {
             if (distanceBlueParking <  distanceRedParking) {
                 return flowerBlueParking;
             }
@@ -71,13 +72,24 @@ public class TeleOpApp extends CommandOpMode {
         return flowerBlueParking;
     }
 
-    private void goToFlower(Follower follower) {
+    private void goToPose(Follower follower, Pose target) {
         Pose currPose = follower.pose();
-        Pose target = calculateClosestFlower(follower);
 
-        Path path = Paths.line(currPose, target).linear(currPose, target);
+        Path path = Paths.line(currPose, target).constant(target);
 
         follower.follow(path);
+    }
+
+    private void resetPosition(Follower follower) {
+        follower.setPose(new Pose(0,0,Math.toRadians(0)));
+    }
+
+    private void driveManual(Follower follower) {
+        follower.manual(
+                -gamepad1.left_stick_y,
+                -gamepad1.left_stick_x,
+                -gamepad1.right_stick_x
+        );
     }
 
     @Override
@@ -94,7 +106,13 @@ public class TeleOpApp extends CommandOpMode {
 
         gamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).whenHeld(new InstantCommand(intake::releaseIntake));
         gamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).whenReleased(new InstantCommand(intake::stopIntake));
-        gamepad.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenPressed(new InstantCommand(() -> goToFlower(follower)));
+
+        gamepad.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenPressed(new InstantCommand(() -> goToPose(follower, calculateClosestFlower(follower))));
+
+        gamepad.getGamepadButton(GamepadKeys.Button.Y).whenPressed(new InstantCommand(() -> resetPosition(follower)));
+        gamepad.getGamepadButton(GamepadKeys.Button.X).whenPressed(new InstantCommand(() -> goToPose(follower, zeroPose)));
+
+        gamepad.getGamepadButton(GamepadKeys.Button.LEFT_STICK_BUTTON).whenPressed(new InstantCommand(() -> driveManual(follower)));
     }
 
     @Override
@@ -103,11 +121,7 @@ public class TeleOpApp extends CommandOpMode {
         LynxUtil.clearBulkCache(hardwareMap);
 
         if (!follower.following()) {
-        follower.manual(
-                -gamepad1.left_stick_y,
-                -gamepad1.left_stick_x,
-                -gamepad1.right_stick_x
-        );
+            driveManual(follower);
         }
 
         follower.update();
