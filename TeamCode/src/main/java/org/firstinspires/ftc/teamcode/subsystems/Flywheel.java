@@ -136,19 +136,20 @@ public class Flywheel extends SubsystemBase {
      */
     private void updateFilteredRPMAccel() {
         long currentTime = System.nanoTime();
+        double currentRPM = getRPM();
 
         if (lastFilteredRPMTime == 0) {
             lastFilteredRPMTime = currentTime;
-            lastFilteredRPM = NOMINAL_VOLTAGE;
+            lastFilteredRPM = currentRPM;
         }
 
         double dt = (currentTime - lastFilteredRPMTime) / NANOS_PER_SECOND;
         if (dt < MIN_DT_SECONDS) dt = MIN_DT_SECONDS;
 
-        double rawAccel = (NOMINAL_VOLTAGE - lastFilteredRPM) / dt; // RPM/s
+        double rawAccel = (currentRPM - lastFilteredRPM) / dt; // RPM/s
         filteredRPMAccel = MathUtilities.lowPassFilter(rawAccel, filteredRPMAccel, FLYWHEEL_ACCEL_FILTER_ALPHA);
 
-        lastFilteredRPM = NOMINAL_VOLTAGE;
+        lastFilteredRPM = currentRPM;
         lastFilteredRPMTime = currentTime;
     }
 
