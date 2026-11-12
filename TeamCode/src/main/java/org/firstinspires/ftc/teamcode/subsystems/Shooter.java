@@ -48,7 +48,7 @@ public class Shooter extends SubsystemBase {
     }
 
     public boolean flywheelAtTarget() {
-        return Math.abs(flywheel.getTargetRPM() - flywheel.filteredRPM) <= RPM_REACHED_THRESHOLD;
+        return Math.abs(flywheel.getTargetRPM() - flywheel.getRPM()) <= RPM_REACHED_THRESHOLD;
     }
 
     public boolean isReadyToShoot() {
