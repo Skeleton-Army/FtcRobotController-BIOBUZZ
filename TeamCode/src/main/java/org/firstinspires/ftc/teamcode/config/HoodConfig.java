@@ -13,9 +13,9 @@ public class HoodConfig {
 
     // --- Physical angle range (radians) the servo range maps to ---
     public static double HOOD_MIN = 0.0;
-    public static double HOOD_MAX = Math.PI / 4;
+    public static double HOOD_MAX = Math.toRadians(45);
 
     // --- Usable angle range (radians), may be narrower than HOOD_MIN/MAX ---
     public static double HOOD_USABLE_MIN = 0.0;
-    public static double HOOD_USABLE_MAX = Math.PI / 4;
+    public static double HOOD_USABLE_MAX = Math.toRadians(45);
 }
