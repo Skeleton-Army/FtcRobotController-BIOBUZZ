@@ -15,13 +15,16 @@ import org.firstinspires.ftc.teamcode.utils.MathUtilities;
 public class Flywheel extends SubsystemBase {
     private final MotorEx flywheel;
     private final PIDController flywheelPID;
+    private final double NOMINAL_VOLTAGE = 12;
     private double voltage = NOMINAL_VOLTAGE;
     private double targetTPS;
     private double lastSpeedFlywheel = 0;
     private long lastLoopTime = 0;
     private final TimerEx rampTimer;
     private final TimerEx stallTimer;
-
+    private static final double SECONDS_PER_MINUTE = 60.0;
+    private static final double NANOS_PER_SECOND = 1.0e9;
+    private static final int RPM_WINDOW_SIZE = 5;
     private final double[] rpmBuffer = new double[RPM_WINDOW_SIZE];
     private int bufferIndex = 0;
     private double runningRpmSum = 0;
