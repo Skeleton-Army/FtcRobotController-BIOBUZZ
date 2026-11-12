@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.consts;
 
-import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 
 public class HivePositions {
