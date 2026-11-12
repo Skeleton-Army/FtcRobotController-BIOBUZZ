@@ -6,8 +6,12 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Utility;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
+import com.qualcomm.robotcore.util.RobotLog;
+import com.seattlesolvers.solverslib.command.Command;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
+import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
+import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.hardware.motors.Motor;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.skeletonarmy.marrow.BulkCaching;
@@ -53,45 +57,17 @@ public class SysIdRoutine extends CommandOpMode {
         flywheel = new MotorEx(hardwareMap, "flywheel", Motor.GoBILDA.BARE);
         //flywheel.motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         this.voltageSensor = hardwareMap.voltageSensor.iterator().next();
+
+        gamepad.getGamepadButton(GamepadKeys.Button.A).whileActiveContinuous(runTest()).whenInactive(() -> {
+            flywheel.set(0);
+        });
+        gamepad.getGamepadButton(GamepadKeys.Button.B).whenActive(this::saveData);
     }
 
     @Override
     public void run() {
         super.run();
         LynxUtil.clearBulkCache(hardwareMap);
-
-        double preRead  = System.currentTimeMillis();
-        double voltage = voltageSensor.getVoltage();
-        double postRead = System.currentTimeMillis();
-
-        double desired = 12;
-        flywheel.set(-(desired/voltage));
-        double position = ticksToRad(flywheel.getCurrentPosition());
-
-        telemetry.addData("flywheel power", flywheel.getRawPower());
-        telemetry.addData("voltage", voltage);
-        telemetry.addData("flywheel ticks", flywheel.getCorrectedVelocity());
-        telemetry.update();
-
-        addRecord(getRuntime(), voltage, position, postRead - preRead);
-    }
-
-    @Override
-    public void end() {
-        try {
-            for (List<Object> row : records) {
-                csvPrinter.printRecord(row);
-            }
-            csvPrinter.flush();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } finally {
-            try {
-                csvPrinter.close();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
     }
 
     private double ticksToRad(double ticks) {
@@ -100,5 +76,40 @@ public class SysIdRoutine extends CommandOpMode {
 
     private void addRecord(Object... values) {
         records.add(Arrays.asList(values));
+    }
+
+    private void saveData() {
+        try {
+            for (List<Object> row : records) {
+                csvPrinter.printRecord(row);
+            }
+            csvPrinter.flush();
+            csvPrinter.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+
+    private Command runTest() {
+        return new InstantCommand(() -> {
+            telemetry.addLine("Press A to stop test");
+
+            double preRead  = System.currentTimeMillis();
+            double voltage = voltageSensor.getVoltage();
+            double postRead = System.currentTimeMillis();
+
+            double desired = 10;
+            flywheel.set(-(desired/voltage));
+            double position = ticksToRad(flywheel.getCurrentPosition());
+            telemetry.addData("Voltage", voltage);
+            telemetry.addData("Sent Voltage", -(desired/voltage));
+            telemetry.addData("Position", position);
+
+            telemetry.update();
+
+            addRecord(getRuntime(), voltage, position, postRead - preRead);
+        });
     }
 }
