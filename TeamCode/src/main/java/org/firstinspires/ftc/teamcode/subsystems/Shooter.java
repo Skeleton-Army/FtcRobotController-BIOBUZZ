@@ -23,6 +23,11 @@ public class Shooter extends SubsystemBase {
         hood = new Hood(hardwareMap);
     }
 
+    @Override
+    public void periodic() {
+        updateVoltage(VoltageGetter.getInstance().getVoltage());
+    }
+
     /**
      * Set the turret and hood to a given point
      *
@@ -37,14 +42,9 @@ public class Shooter extends SubsystemBase {
     }
 
     public void setTarget(double hoodAngleRad, double rpm) {
-        turret.setTargetPose(HivePositions.getHivePose(follower));
+        turret.setTargetPose(HivePositions.getHivePose(follower.pose().y()));
         hood.setVerticalAngle(hoodAngleRad);
         flywheel.setRPM(rpm);
-    }
-
-    @Override
-    public void periodic() {
-        updateVoltage(VoltageGetter.getInstance().getVoltage());
     }
 
     public boolean flywheelAtTarget() {
