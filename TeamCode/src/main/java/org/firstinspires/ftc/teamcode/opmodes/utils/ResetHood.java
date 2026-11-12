@@ -24,7 +24,7 @@ public class ResetHood extends CommandOpMode {
     public void run() {
         super.run();
         telemetry.addLine("Press A or X to reset the hood");
-        telemetry.addLine("Press B or O to reset the hood");
+        telemetry.addLine("Press B or O to move the hood to it's max position");
         telemetry.addLine("Make sure to press it ONCE and not hold the button!");
         telemetry.addData("Hood Position", hood.get());
         telemetry.update();
