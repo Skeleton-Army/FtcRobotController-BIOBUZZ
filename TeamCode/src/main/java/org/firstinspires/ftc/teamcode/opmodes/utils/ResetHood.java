@@ -17,12 +17,14 @@ public class ResetHood extends CommandOpMode {
         this.hood = new ServoEx(hardwareMap, "hood");
         this.gamepadEx = new GamepadEx(gamepad1);
         gamepadEx.getGamepadButton(GamepadKeys.Button.A).whenActive(() -> hood.set(HoodConfig.HOOD_POSSIBLE_MIN));
+        gamepadEx.getGamepadButton(GamepadKeys.Button.B).whenActive(() -> hood.set(HoodConfig.HOOD_POSSIBLE_MAX));
     }
 
     @Override
     public void run() {
         super.run();
         telemetry.addLine("Press A or X to reset the hood");
+        telemetry.addLine("Press B or O to reset the hood");
         telemetry.addLine("Make sure to press it ONCE and not hold the button!");
         telemetry.addData("Hood Position", hood.get());
         telemetry.update();
