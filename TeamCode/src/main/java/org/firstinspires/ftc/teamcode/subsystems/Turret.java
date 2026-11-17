@@ -31,8 +31,8 @@ public class Turret extends SubsystemBase {
     private double voltage;
     private final TimerEx startupTimer;
     private final TimerEx stallTimer;
-    private Pose targetPose = Pose.zero();
-    private final Follower follower;
+    private Pose targetPose;
+    private final Supplier<Pose> pose;
 
     public Turret(final HardwareMap hardwareMap, final Supplier<Pose> pose) {
         super();
@@ -44,7 +44,8 @@ public class Turret extends SubsystemBase {
         turretPID = new PIDController(TURRET_KP, TURRET_KI, TURRET_KD);
         turretPID.setTolerance(TURRET_POSITION_TOLERANCE, TURRET_VELOCITY_TOLERANCE);
 
-        this.follower = follower;
+        this.pose = pose;
+        targetPose = Pose.zero();
 
         setTargetAngle(0);
 
