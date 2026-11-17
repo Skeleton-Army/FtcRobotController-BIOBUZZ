@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.firstinspires.ftc.teamcode.config.TurretConfig.*;
 
-import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 import com.pedropathing.utils.Angle;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -13,6 +12,7 @@ import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.seattlesolvers.solverslib.util.MathUtils;
 import com.skeletonarmy.marrow.TimerEx;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.utils.MathUtilities;
 
@@ -34,7 +34,7 @@ public class Turret extends SubsystemBase {
     private Pose targetPose = Pose.zero();
     private final Follower follower;
 
-    public Turret(final HardwareMap hardwareMap, final Follower follower) {
+    public Turret(final HardwareMap hardwareMap, final Supplier<Pose> pose) {
         super();
         turret = new MotorEx(hardwareMap, TURRET_NAME, TURRET_MOTOR);
         turret.setRunMode(MotorEx.RunMode.RawPower);
@@ -290,7 +290,7 @@ public class Turret extends SubsystemBase {
     }
 
     private double getTargetAngle() {
-        return calculateTargetAngle(targetPose, follower.pose());
+        return calculateTargetAngle(targetPose, pose.get());
     }
 
     public void setTargetPose(Pose target) {
