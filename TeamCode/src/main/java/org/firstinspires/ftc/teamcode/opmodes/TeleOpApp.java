@@ -17,15 +17,13 @@ import com.pedropathing.paths.Path;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Intake;
 
-import kotlin.time.Instant;
-
 @TeleOp(name="TeleOp")
 public class TeleOpApp extends CommandOpMode {
     private Follower follower;
     private Intake intake;
     private GamepadEx gamepad;
     private final Pose startPose = new Pose(0, 0, Math.toRadians(0));
-    private final Pose zeroPose = new Pose(0,0,0);
+//  private final Pose zeroPose = new Pose(0,0,0);
     private boolean previousButtonB = false;
     private long lastPressButtonB = 0;
     private boolean isHoldingIntake = false;
@@ -81,7 +79,84 @@ public class TeleOpApp extends CommandOpMode {
     }
 
     private void resetPosition(Follower follower) {
-        follower.setPose(new Pose(0,0,Math.toRadians(0)));
+        double currentX = follower.pose().x();
+        double currentY = follower.pose().y();
+        int currentHeading = (int) follower.pose().heading();
+        double roundedHeading = Math.round(currentHeading / 90) * 90;
+
+        double halfRobotWidth; // = 17.785
+        double halfRobotLength; //  = 17.323
+
+        if (roundedHeading == 0 || roundedHeading == 180) {
+            halfRobotWidth = 17.785 / 2;
+            halfRobotLength = 17.323 / 2;
+        }
+        else {
+            halfRobotWidth = 17.323 / 2;
+            halfRobotLength = 17.785 / 2;
+        }
+
+        if (currentX < 5 + halfRobotWidth && currentY < 5 + halfRobotLength ) {
+            follower.setPose(new Pose(0 + halfRobotWidth,0 + halfRobotLength,Math.toRadians(roundedHeading)));
+        }
+        else if (currentX > 139 - halfRobotWidth && currentY < 5 + halfRobotLength) {
+            follower.setPose(new Pose(144 - halfRobotWidth,0 + halfRobotLength,Math.toRadians(roundedHeading)));
+        }
+        else if (currentX < 5 + halfRobotWidth && currentY > 139 - halfRobotLength) {
+            follower.setPose(new Pose(0 + halfRobotWidth,144 - halfRobotLength,Math.toRadians(roundedHeading)));
+        }
+        else if (currentX > 139 - halfRobotWidth && currentY > 139 - halfRobotLength) {
+            follower.setPose(new Pose(144 - halfRobotWidth,144 - halfRobotLength,Math.toRadians(roundedHeading)));
+        }
+        // WALLS:
+        else if(currentX < 5 + halfRobotWidth){
+            follower.setPose(new Pose(0 + halfRobotWidth,currentY,Math.toRadians(roundedHeading)));
+        }
+        else if(currentY < 5 + halfRobotLength){
+            follower.setPose(new Pose(currentX,0 + halfRobotLength,Math.toRadians(roundedHeading)));
+        }
+        else if(currentX > 139 - halfRobotWidth) {
+                follower.setPose(new Pose(144 - halfRobotWidth, currentY, Math.toRadians(roundedHeading)));
+        }
+        else if (currentY > 139 - halfRobotLength) {
+                follower.setPose(new Pose(currentX, 144 - halfRobotLength, Math.toRadians(roundedHeading)));
+        }
+    }
+
+    private void goToReset(Follower follower) {
+        double currentX = follower.pose().x();
+        double currentY = follower.pose().y();
+        int currentHeading = (int) follower.pose().heading();
+        double roundedHeading = Math.round(currentHeading / 90) * 90;
+
+        double halfRobotWidth; // = 17.785
+        double halfRobotLength; //  = 17.323
+
+        if (roundedHeading == 0 || roundedHeading == 180) {
+            halfRobotWidth = 17.785 / 2;
+            halfRobotLength = 17.323 / 2;
+        }
+        else {
+            halfRobotWidth = 17.323 / 2;
+            halfRobotLength = 17.785 / 2;
+        }
+
+        Pose targetPose;
+
+        if (currentX <= 72 && currentY <= 72 ) {
+            targetPose = new Pose(0 + halfRobotWidth,0 + halfRobotLength,Math.toRadians(roundedHeading));
+        }
+        else if (currentX > 72 && currentY < 72) {
+            targetPose = new Pose(144 - halfRobotWidth,0 + halfRobotLength,Math.toRadians(roundedHeading));
+        }
+        else if (currentX < 72 && currentY > 72) {
+            targetPose = new Pose(0 + halfRobotWidth,144 - halfRobotLength,Math.toRadians(roundedHeading));
+        }
+        else {
+            targetPose = new Pose(144 - halfRobotWidth,144 - halfRobotLength,Math.toRadians(roundedHeading));
+        }
+
+        goToPose(follower, targetPose);
     }
 
     private void driveManual(Follower follower) {
@@ -110,7 +185,7 @@ public class TeleOpApp extends CommandOpMode {
         gamepad.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenPressed(new InstantCommand(() -> goToPose(follower, calculateClosestFlower(follower))));
 
         gamepad.getGamepadButton(GamepadKeys.Button.Y).whenPressed(new InstantCommand(() -> resetPosition(follower)));
-        gamepad.getGamepadButton(GamepadKeys.Button.X).whenPressed(new InstantCommand(() -> goToPose(follower, zeroPose)));
+        gamepad.getGamepadButton(GamepadKeys.Button.X).whenPressed(new InstantCommand(() -> goToReset(follower)));
 
         gamepad.getGamepadButton(GamepadKeys.Button.LEFT_STICK_BUTTON).whenPressed(new InstantCommand(() -> driveManual(follower)));
     }
