@@ -5,7 +5,6 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
-import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 
 @Utility
 public class FullPowerTest extends CommandOpMode {
@@ -25,8 +24,8 @@ public class FullPowerTest extends CommandOpMode {
                     motor2.setPower(-1);
                 })
                 .whenInactive(() -> {
-                   motor1.setPower(0);
-                   motor2.setPower(0);
+                    motor1.setPower(0);
+                    motor2.setPower(0);
                 });
     }
 }
