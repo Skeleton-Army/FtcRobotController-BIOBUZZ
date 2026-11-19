@@ -32,9 +32,9 @@ public class Turret extends SubsystemBase {
     private final TimerEx startupTimer;
     private final TimerEx stallTimer;
     private Pose targetPose;
-    private final Supplier<Pose> pose;
+    private final Supplier<Pose> poseSupplier;
 
-    public Turret(final HardwareMap hardwareMap, final Supplier<Pose> pose) {
+    public Turret(final HardwareMap hardwareMap, final Supplier<Pose> poseSupplier) {
         super();
         turret = new MotorEx(hardwareMap, TURRET_NAME, TURRET_MOTOR);
         turret.setRunMode(MotorEx.RunMode.RawPower);
@@ -44,7 +44,7 @@ public class Turret extends SubsystemBase {
         turretPID = new PIDController(TURRET_KP, TURRET_KI, TURRET_KD);
         turretPID.setTolerance(TURRET_POSITION_TOLERANCE, TURRET_VELOCITY_TOLERANCE);
 
-        this.pose = pose;
+        this.poseSupplier = poseSupplier;
         targetPose = Pose.zero();
 
         setTargetAngle(0);
@@ -291,7 +291,7 @@ public class Turret extends SubsystemBase {
     }
 
     private double getTargetAngle() {
-        return calculateTargetAngle(targetPose, pose.get());
+        return calculateTargetAngle(targetPose, poseSupplier.get());
     }
 
     public void setTargetPose(Pose target) {
