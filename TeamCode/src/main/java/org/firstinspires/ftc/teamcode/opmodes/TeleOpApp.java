@@ -22,8 +22,7 @@ public class TeleOpApp extends CommandOpMode {
     private Follower follower;
     private Intake intake;
     private GamepadEx gamepad;
-    private final Pose startPose = new Pose(0, 0, Math.toRadians(0));
-//  private final Pose zeroPose = new Pose(0,0,0);
+    private final Pose startPose = new Pose(17.785 / 2, 17.323 / 2, Math.toRadians(0));
     private boolean previousButtonB = false;
     private long lastPressButtonB = 0;
     private boolean isHoldingIntake = false;
@@ -37,7 +36,7 @@ public class TeleOpApp extends CommandOpMode {
     private final Pose flowerBlueGarden = new Pose(110, 90, Math.toRadians(0));
     private final Pose flowerBlueParking = new Pose(82, 10, Math.toRadians(-90));
 
-    private Pose calculateClosestFlower(Follower follower){
+    private Pose calculateClosestFlower(){
         double robotX = follower.pose().x();
         double robotY = follower.pose().y();
         double distanceRedGarden = Math.hypot(flowerRedGarden.x() - robotX, flowerRedGarden.y() - robotY);
@@ -70,7 +69,7 @@ public class TeleOpApp extends CommandOpMode {
         return flowerBlueParking;
     }
 
-    private void goToPose(Follower follower, Pose target) {
+    private void goToPose(Pose target) {
         Pose currPose = follower.pose();
 
         Path path = Paths.line(currPose, target).constant(target);
@@ -78,10 +77,10 @@ public class TeleOpApp extends CommandOpMode {
         follower.follow(path);
     }
 
-    private void resetPosition(Follower follower) {
+    private void resetPosition() {
         double currentX = follower.pose().x();
         double currentY = follower.pose().y();
-        int currentHeading = (int) follower.pose().heading();
+        double currentHeading = Math.toDegrees(follower.pose().heading());
         double roundedHeading = Math.round(currentHeading / 90) * 90;
 
         double halfRobotWidth; // = 17.785
@@ -96,38 +95,67 @@ public class TeleOpApp extends CommandOpMode {
             halfRobotLength = 17.785 / 2;
         }
 
-        if (currentX < 5 + halfRobotWidth && currentY < 5 + halfRobotLength ) {
-            follower.setPose(new Pose(0 + halfRobotWidth,0 + halfRobotLength,Math.toRadians(roundedHeading)));
-        }
-        else if (currentX > 139 - halfRobotWidth && currentY < 5 + halfRobotLength) {
-            follower.setPose(new Pose(144 - halfRobotWidth,0 + halfRobotLength,Math.toRadians(roundedHeading)));
-        }
-        else if (currentX < 5 + halfRobotWidth && currentY > 139 - halfRobotLength) {
-            follower.setPose(new Pose(0 + halfRobotWidth,144 - halfRobotLength,Math.toRadians(roundedHeading)));
-        }
-        else if (currentX > 139 - halfRobotWidth && currentY > 139 - halfRobotLength) {
-            follower.setPose(new Pose(144 - halfRobotWidth,144 - halfRobotLength,Math.toRadians(roundedHeading)));
-        }
+        boolean wallLeft = false;
+        boolean wallClose = false;
+        boolean wallFar = false;
+        boolean wallRight = false;
+
         // WALLS:
-        else if(currentX < 5 + halfRobotWidth){
-            follower.setPose(new Pose(0 + halfRobotWidth,currentY,Math.toRadians(roundedHeading)));
+        if(currentX < 5 + halfRobotWidth){
+            wallLeft = true;
         }
-        else if(currentY < 5 + halfRobotLength){
+        if(currentY < 5 + halfRobotLength){
             follower.setPose(new Pose(currentX,0 + halfRobotLength,Math.toRadians(roundedHeading)));
+            wallClose = true;
+
         }
-        else if(currentX > 139 - halfRobotWidth) {
-                follower.setPose(new Pose(144 - halfRobotWidth, currentY, Math.toRadians(roundedHeading)));
+        if(currentX > 139 - halfRobotWidth) {
+            wallFar = true;
+
         }
-        else if (currentY > 139 - halfRobotLength) {
+        if (currentY > 139 - halfRobotLength) {
                 follower.setPose(new Pose(currentX, 144 - halfRobotLength, Math.toRadians(roundedHeading)));
+            wallRight = true;
+
         }
+
+        if (wallLeft) {
+            if (wallClose) {
+                follower.setPose(new Pose(0 + halfRobotWidth,0 + halfRobotLength,Math.toRadians(roundedHeading)));
+                return;
+            }
+
+            if (wallFar) {
+                follower.setPose(new Pose(0 + halfRobotWidth,144 - halfRobotLength,Math.toRadians(roundedHeading)));
+                return;
+            }
+
+            follower.setPose(new Pose(0 + halfRobotWidth,currentY,Math.toRadians(roundedHeading)));
+            return;
+        }
+
+        if (wallRight) {
+            if (wallClose) {
+
+                return;
+            }
+
+            if (wallFar) {
+
+                return;
+            }
+
+            follower.setPose(new Pose(144 - halfRobotWidth, currentY, Math.toRadians(roundedHeading)));
+            return;
+        }
+
     }
 
-    private void goToReset(Follower follower) {
+    private void goToReset() {
         double currentX = follower.pose().x();
         double currentY = follower.pose().y();
-        int currentHeading = (int) follower.pose().heading();
-        double roundedHeading = Math.round(currentHeading / 90) * 90;
+        int currentHeading = (int) Math.toDegrees(follower.pose().heading());
+        double roundedHeading = Math.round(currentHeading / 90.0) * 90;
 
         double halfRobotWidth; // = 17.785
         double halfRobotLength; //  = 17.323
@@ -159,7 +187,7 @@ public class TeleOpApp extends CommandOpMode {
         goToPose(follower, targetPose);
     }
 
-    private void driveManual(Follower follower) {
+    private void driveManual() {
         follower.manual(
                 -gamepad1.left_stick_y,
                 -gamepad1.left_stick_x,
@@ -182,12 +210,12 @@ public class TeleOpApp extends CommandOpMode {
         gamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).whenHeld(new InstantCommand(intake::releaseIntake));
         gamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).whenReleased(new InstantCommand(intake::stopIntake));
 
-        gamepad.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenPressed(new InstantCommand(() -> goToPose(follower, calculateClosestFlower(follower))));
+        gamepad.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenPressed(new InstantCommand(() -> goToPose(calculateClosestFlower())));
 
-        gamepad.getGamepadButton(GamepadKeys.Button.Y).whenPressed(new InstantCommand(() -> resetPosition(follower)));
-        gamepad.getGamepadButton(GamepadKeys.Button.X).whenPressed(new InstantCommand(() -> goToReset(follower)));
+        gamepad.getGamepadButton(GamepadKeys.Button.TRIANGLE).whenPressed(new InstantCommand(() -> resetPosition()));
+        gamepad.getGamepadButton(GamepadKeys.Button.SQUARE).whenPressed(new InstantCommand(() -> goToReset()));
 
-        gamepad.getGamepadButton(GamepadKeys.Button.LEFT_STICK_BUTTON).whenPressed(new InstantCommand(() -> driveManual(follower)));
+        gamepad.getGamepadButton(GamepadKeys.Button.LEFT_STICK_BUTTON).whenPressed(new InstantCommand(() -> driveManual()));
     }
 
     @Override
