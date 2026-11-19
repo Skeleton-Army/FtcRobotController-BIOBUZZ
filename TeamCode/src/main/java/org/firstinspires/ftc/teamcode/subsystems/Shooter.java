@@ -2,11 +2,14 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
+import com.pedropathing.math.Velocity;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 
 import org.firstinspires.ftc.teamcode.calculators.ShooterCalculator;
 import org.firstinspires.ftc.teamcode.calculators.ShooterSolution;
 import org.firstinspires.ftc.teamcode.config.ShooterConfig;
+
+import java.util.function.Supplier;
 
 /**
  * Primary Shooter Subsystem for the solverslib architecture integrated with Pedro Pathing.
@@ -28,11 +31,12 @@ public class Shooter extends SubsystemBase {
      * Uses the ShooterConfig constants when instantiating the Turret, Flywheel, and Hood sub-objects.
      * Throws an {@link IllegalArgumentException} if config is null.
      *
-     * @param follower Pedro Pathing Follower instance (can be null if unused)
-     * @param config Base configuration containing subsystem parameters and constants (must not be null)
+     * @param follower   Pedro Pathing Follower instance (can be null if unused)
+     * @param config     Base configuration containing subsystem parameters and constants (must not be null)
      * @param calculator Optional calculation strategy (if null, periodic will not run sub-components)
      */
     public Shooter(Follower follower, ShooterConfig config, ShooterCalculator calculator) {
+        super();
         setName("ShooterMasterSubsystem");
         if (config == null) {
             throw new IllegalArgumentException("ShooterConfig cannot be null");
@@ -49,7 +53,7 @@ public class Shooter extends SubsystemBase {
      * Overloaded constructor accepting a Pedro Follower and a ShooterConfig.
      *
      * @param follower Pedro Pathing Follower instance
-     * @param config Base configuration containing subsystem parameters (must not be null)
+     * @param config   Base configuration containing subsystem parameters (must not be null)
      */
     public Shooter(Follower follower, ShooterConfig config) {
         this(follower, config, null);
@@ -101,7 +105,9 @@ public class Shooter extends SubsystemBase {
      * @param solution Container holding RPM, turret angle, and hood angle
      */
     public void applySolution(ShooterSolution solution) {
-        if (solution == null) return;
+        if (solution == null) {
+            return;
+        }
         this.currentSolution = solution;
         setFlywheelRPM(solution.getFlywheelRPM());
         setTurretAngle(solution.getTurretAngleDegrees());
@@ -109,30 +115,73 @@ public class Shooter extends SubsystemBase {
     }
 
     /**
-     * Calculates and applies a shooter solution based on direct target distance.
+     * Calculates and applies a shooter solution based on a direct target distance
+     * along the robot's current heading (or +X if no follower is present).
      *
      * @param distance Distance to target in distance units
      */
     public void updateTargetingByDistance(double distance) {
-        if (calculator != null) {
-            ShooterSolution solution = calculator.calculate(distance);
-            applySolution(solution);
+        if (calculator == null) {
+            return;
         }
+
+        double robotX = 0.0;
+        double robotY = 0.0;
+        double robotHeading = 0.0;
+        double vx = 0.0;
+        double vy = 0.0;
+
+        if (follower != null) {
+            Pose currentPose = follower.pose();
+            if (currentPose != null) {
+                robotX = currentPose.x();
+                robotY = currentPose.y();
+                robotHeading = currentPose.heading();
+            }
+            Velocity velocity = follower.velocity();
+            if (velocity != null) {
+                vx = velocity.vx;
+                vy = velocity.vy;
+            }
+        }
+
+        double goalX = robotX + distance * Math.cos(robotHeading);
+        double goalY = robotY + distance * Math.sin(robotHeading);
+        double currentFlywheelRpm = flywheel.getCurrentRPM();
+
+        ShooterSolution solution = calculator.calculate(
+                robotX, robotY, robotHeading,
+                goalX, goalY,
+                vx, vy,
+                currentFlywheelRpm
+        );
+        applySolution(solution);
     }
 
     /**
-     * Calculates distance from current Pedro Follower robot position to a target field Pose,
-     * evaluates the solution using the calculator, and updates shooter targeting.
+     * Evaluates a shooter solution from the current Pedro Follower pose and velocity
+     * to a target field Pose, then updates shooter targeting.
      *
      * @param targetPose Target coordinates in field frame
      */
     public void updateTargetingByPose(Pose targetPose) {
         if (follower != null && targetPose != null && calculator != null) {
             Pose currentPose = follower.pose();
-            double dx = targetPose.x() - currentPose.x();
-            double dy = targetPose.y() - currentPose.y();
-            double distance = Math.hypot(dx, dy);
-            ShooterSolution solution = calculator.calculate(distance);
+            if (currentPose == null) {
+                return;
+            }
+
+            Velocity velocity = follower.velocity();
+            double vx = velocity != null ? velocity.vx : 0.0;
+            double vy = velocity != null ? velocity.vy : 0.0;
+            double currentFlywheelRpm = flywheel.getCurrentRPM();
+
+            ShooterSolution solution = calculator.calculate(
+                    currentPose.x(), currentPose.y(), currentPose.heading(),
+                    targetPose.x(), targetPose.y(),
+                    vx, vy,
+                    currentFlywheelRpm
+            );
             applySolution(solution);
         }
     }

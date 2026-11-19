@@ -1,52 +1,30 @@
 package org.firstinspires.ftc.teamcode.calculators;
 
-import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
+import com.skeletonarmy.marrow.OpModeManager;
+
 import org.firstinspires.ftc.teamcode.config.ShooterConfig;
 import org.firstinspires.ftc.teamcode.utilities.Polynomial;
 
 /**
- * Polynomial-based implementation of {@link ShooterCalculator}.
- *
- * Given target geometry, robot motion, and current flywheel speed, it computes:
- * 1. The target flywheel RPM needed to score while compensating for robot motion.
- * 2. The turret relative angle needed to aim at the goal.
- * 3. The hood pitch angle needed to compensate for trajectory shifts.
- * 4. Required ball exit speed from the flywheel.
- * 5. Validity flags indicating whether the shot is physically achievable.
+ * Direct polynomial-based implementation of {@link ShooterCalculator} without
+ * exit-speed velocity conversions or speed-corridor range checks, while retaining
+ * physical hood angle limit verification.
  */
 public class BasicShooterCalculator implements ShooterCalculator {
 
     // ------------------------------------------------------------------
-    // Models (all polynomials in ascending-degree order)
+    // Models (polynomials in ascending-degree order)
     // ------------------------------------------------------------------
+
+    /** Distance to goal (m) -> target flywheel RPM. Comes from the shooter config. */
+    private final Polynomial flywheelRpmModel;
 
     /** Distance to goal (m) -> hood pitch angle (degrees). Comes from the shooter config. */
     private final Polynomial hoodAngleModel;
 
-    /** Distance to goal (m) -> ideal ball exit speed (m/s). */
-    private final Polynomial exitSpeedModel;
-
-    /**
-     * Ball exit speed (m/s) -> flywheel RPM.
-     * Must be linear (2 coefficients) so it can be inverted in {@link #rpmToExitSpeed(double)}.
-     */
-    private final Polynomial speedToRpmModel;
-
-    /** Distance to goal (m) -> lowest exit speed (m/s) that still scores. */
-    private final Polynomial minAllowedSpeedModel;
-
-    /** Distance to goal (m) -> highest exit speed (m/s) that still scores. */
-    private final Polynomial maxAllowedSpeedModel;
-
     // ------------------------------------------------------------------
-    // Tolerances and turret geometry
+    // Turret geometry and hood limits
     // ------------------------------------------------------------------
-
-    /** Extra slack (m/s) allowed BELOW the minimum speed before a shot is called invalid. */
-    private final double lowerSpeedBuffer;
-
-    /** Extra slack (m/s) allowed ABOVE the maximum speed before a shot is called invalid. */
-    private final double upperSpeedBuffer;
 
     /** Turret pivot offset from the robot center, along the robot's forward axis (m). */
     private final double turretOffsetForward;
@@ -54,143 +32,103 @@ public class BasicShooterCalculator implements ShooterCalculator {
     /** Turret pivot offset from the robot center, along the robot's left axis (m). */
     private final double turretOffsetLeft;
 
-    /** Smallest launch pitch (radians) the hood can physically reach. From the config. */
-    private final double hoodMinRadians;
+    /** Smallest launch pitch (degrees) the hood can physically reach. From the config. */
+    private final double minHoodAngleDeg;
 
-    /** Largest launch pitch (radians) the hood can physically reach. From the config. */
-    private final double hoodMaxRadians;
+    /** Largest launch pitch (degrees) the hood can physically reach. From the config. */
+    private final double maxHoodAngleDeg;
 
     public BasicShooterCalculator(ShooterConfig config,
-                                  Polynomial exitSpeedModel,
-                                  Polynomial speedToRpmModel,
-                                  Polynomial minAllowedSpeedModel,
-                                  Polynomial maxAllowedSpeedModel,
-                                  double lowerSpeedBuffer,
-                                  double upperSpeedBuffer,
-                                  double turretOffsetForward,
-                                  double turretOffsetLeft) {
+                                   double turretOffsetForward,
+                                   double turretOffsetLeft) {
         if (config == null) {
             throw new IllegalArgumentException("ShooterConfig cannot be null");
         }
-        if (speedToRpmModel.getDegree() != 1) {
-            throw new IllegalArgumentException(
-                    "speedToRpmModel must be linear (2 coefficients) so RPM can be converted back to speed.");
-        }
+        this.flywheelRpmModel = config.getFlywheelRpmModel();
         this.hoodAngleModel = config.getHoodAngleModel();
-        this.exitSpeedModel = exitSpeedModel;
-        this.speedToRpmModel = speedToRpmModel;
-        this.minAllowedSpeedModel = minAllowedSpeedModel;
-        this.maxAllowedSpeedModel = maxAllowedSpeedModel;
-        this.lowerSpeedBuffer = lowerSpeedBuffer;
-        this.upperSpeedBuffer = upperSpeedBuffer;
         this.turretOffsetForward = turretOffsetForward;
         this.turretOffsetLeft = turretOffsetLeft;
-        this.hoodMinRadians = Math.toRadians(config.getMinHoodAngle());
-        this.hoodMaxRadians = Math.toRadians(config.getMaxHoodAngle());
+        this.minHoodAngleDeg = config.getMinHoodAngle();
+        this.maxHoodAngleDeg = config.getMaxHoodAngle();
     }
 
     // ------------------------------------------------------------------
     // ShooterCalculator interface
     // ------------------------------------------------------------------
 
-    /**
-     * Calculates the shot solution for a robot, compensating for robot velocity and current flywheel state.
-     *
-     * @param robotX             Robot X on the field (m)
-     * @param robotY             Robot Y on the field (m)
-     * @param robotHeading       Robot heading (radians)
-     * @param goalX              Goal X on the field (m)
-     * @param goalY              Goal Y on the field (m)
-     * @param robotVelocityX     Robot field-frame velocity X (m/s)
-     * @param robotVelocityY     Robot field-frame velocity Y (m/s)
-     * @param currentFlywheelRpm Current measured flywheel RPM
-     * @return Full solution containing flywheel RPM, turret angle, hood angle, exit speed, and shot validity.
-     */
     @Override
     public ShooterSolution calculate(double robotX, double robotY, double robotHeading,
                                      double goalX, double goalY,
                                      double robotVelocityX, double robotVelocityY,
                                      double currentFlywheelRpm) {
-        // Calculate turret pivot field position and distance/angle to goal
         double cosHeading = Math.cos(robotHeading);
         double sinHeading = Math.sin(robotHeading);
 
+        // Turret pivot position in field coordinates
         double turretX = robotX + turretOffsetForward * cosHeading - turretOffsetLeft * sinHeading;
         double turretY = robotY + turretOffsetForward * sinHeading + turretOffsetLeft * cosHeading;
 
         double dx = goalX - turretX;
         double dy = goalY - turretY;
         double distance = Math.hypot(dx, dy);
-        double angleToGoal = Math.atan2(dy, dx);
+        OpModeManager.getTelemetry().addData("goal x", goalX);
+        OpModeManager.getTelemetry().addData("goal y", goalY);
+        OpModeManager.getTelemetry().addData("turret x", turretX);
+        OpModeManager.getTelemetry().addData("turret y", turretY);
+        OpModeManager.getTelemetry().addData("distance", distance);
+        double fieldAngleToGoal = Math.atan2(dy, dx);
 
-        Vector3D robotVelocity = new Vector3D(robotVelocityX, robotVelocityY, 0);
+        // Direct polynomial outputs from distance
+        int targetRpm = calculateFlywheelRpm(distance);
+        double hoodAngleDeg = calculateHoodAngleDegrees(distance);
 
-        // Step 1: Stationary ("ideal") launch velocity toward the goal
-        double idealSpeed = calculateExitSpeed(distance);
-        double hoodAngle = Math.toRadians(calculateHoodAngleDegrees(distance));
-        Vector3D idealLaunch = buildLaunchVelocity(idealSpeed, hoodAngle, angleToGoal);
+        // Project robot velocity onto axes perpendicular and parallel to the goal line
+        // to adjust turret lead angle without requiring an exit speed variable
+        double dirX = distance > 1e-6 ? dx / distance : Math.cos(robotHeading);
+        double dirY = distance > 1e-6 ? dy / distance : Math.sin(robotHeading);
+        double perpX = -dirY;
+        double perpY = dirX;
 
-        // Step 2: Launch velocity the flywheel must supply, and the target RPM needed
-        Vector3D requiredLaunch = idealLaunch.subtract(robotVelocity);
-        double requiredSpeed = requiredLaunch.getNorm();
-        int targetRpm = exitSpeedToRpm(requiredSpeed);
+        double crossVelocity = robotVelocityX * perpX + robotVelocityY * perpY;
+        double radialVelocity = robotVelocityX * dirX + robotVelocityY * dirY;
 
-        // Step 3: What the flywheel is actually outputting right now
-        double currentSpeed = rpmToExitSpeed(currentFlywheelRpm);
-        Vector3D actualLaunch = buildLaunchVelocity(currentSpeed, hoodAngle, angleToGoal);
+        // Small angular lead compensation based on lateral motion relative to distance
+        double angularLeadRad = (distance > 1e-6)
+                ? Math.atan2(-crossVelocity * 0.15, Math.max(distance, 0.25))
+                : 0.0;
 
-        // Vector direction to aim so that (launch - robot motion) hits the goal
-        Vector3D aimVector = actualLaunch.subtract(robotVelocity);
-        double aimTurretAngle = aimVector.getAlpha() - robotHeading; // relative to robot heading
-        double aimHorizontalSpeed = Math.hypot(aimVector.getX(), aimVector.getY());
-        double aimHoodAngle = Math.atan2(aimVector.getZ(), aimHorizontalSpeed);
+        // Slight RPM adjustment for radial approach/recession
+        int compensatedRpm = (int) Math.round(targetRpm - radialVelocity * 25.0);
 
-        // Step 4: Physical bounds and validity checks
-        boolean isHoodAngleReachable = aimHoodAngle >= hoodMinRadians && aimHoodAngle <= hoodMaxRadians;
-        boolean isSpeedInCorridor = isExitSpeedValid(distance, currentSpeed, requiredSpeed);
-        boolean isShotPossible = isHoodAngleReachable && isSpeedInCorridor;
+        double relativeTurretRad = normalizeAngle((fieldAngleToGoal + angularLeadRad) - robotHeading);
+        double finalTurretDegrees = Math.toDegrees(relativeTurretRad);
+        OpModeManager.getTelemetry().addData("hood Angle (calc)", hoodAngleDeg);
+        // Keep physical hood bounds check
+        boolean isHoodAngleReachable = isHoodAngleValid(hoodAngleDeg);
 
-        double finalTurretDegrees = Math.toDegrees(normalizeAngle(aimTurretAngle));
-        double finalHoodDegrees = Math.toDegrees(aimHoodAngle);
-
-        return new ShooterSolution(targetRpm, finalTurretDegrees, finalHoodDegrees, requiredSpeed, isShotPossible);
+        return new ShooterSolution(
+                compensatedRpm,
+                finalTurretDegrees,
+                hoodAngleDeg,
+                isHoodAngleReachable
+        );
     }
 
     // ------------------------------------------------------------------
     // Calculations
     // ------------------------------------------------------------------
 
+    public int calculateFlywheelRpm(double distance) {
+        return (int) Math.round(flywheelRpmModel.evaluate(distance));
+    }
+
     public double calculateHoodAngleDegrees(double distance) {
+        OpModeManager.getTelemetry().addData("hood Angle (calc hood)", hoodAngleModel.evaluate(distance));
         return hoodAngleModel.evaluate(distance);
     }
 
-    public double calculateExitSpeed(double distance) {
-        return exitSpeedModel.evaluate(distance);
-    }
-
-    public int exitSpeedToRpm(double exitSpeed) {
-        return (int) speedToRpmModel.evaluate(exitSpeed);
-    }
-
-    public double rpmToExitSpeed(double rpm) {
-        double[] coefficients = speedToRpmModel.getCoefficients();
-        double intercept = coefficients[0];
-        double slope = coefficients[1];
-        return (rpm - intercept) / slope;
-    }
-
-    public boolean isExitSpeedValid(double distance, double exitSpeed) {
-        return isExitSpeedValid(distance, exitSpeed, calculateExitSpeed(distance));
-    }
-
-    public boolean isExitSpeedValid(double distance, double exitSpeed, double targetSpeed) {
-        double bandShift = targetSpeed - calculateExitSpeed(distance);
-
-        double minSpeed = minAllowedSpeedModel.evaluate(distance) + bandShift;
-        double maxSpeed = maxAllowedSpeedModel.evaluate(distance) + bandShift;
-
-        return exitSpeed >= minSpeed - lowerSpeedBuffer
-                && exitSpeed <= maxSpeed + upperSpeedBuffer;
+    public boolean isHoodAngleValid(double hoodAngleDegrees) {
+        return hoodAngleDegrees >= minHoodAngleDeg && hoodAngleDegrees <= maxHoodAngleDeg;
     }
 
     public double calculateTurretAngleDegrees(double robotX, double robotY, double robotHeading,
@@ -205,18 +143,10 @@ public class BasicShooterCalculator implements ShooterCalculator {
         return Math.toDegrees(angleRadians);
     }
 
-    private Vector3D buildLaunchVelocity(double speed, double pitch, double headingAngle) {
-        double horizontalSpeed = speed * Math.cos(pitch);
-        return new Vector3D(
-                horizontalSpeed * Math.cos(headingAngle),
-                horizontalSpeed * Math.sin(headingAngle),
-                speed * Math.sin(pitch));
-    }
-
     private static double normalizeAngle(double angleRadians) {
-        double angle = angleRadians % (2 * Math.PI);
-        if (angle < 0) {
-            return angle + 2 * Math.PI;
+        double angle = angleRadians % (2.0 * Math.PI);
+        if (angle < 0.0) {
+            angle += 2.0 * Math.PI;
         }
         return angle;
     }

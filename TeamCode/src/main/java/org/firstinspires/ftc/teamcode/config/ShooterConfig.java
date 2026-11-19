@@ -36,8 +36,8 @@ public class ShooterConfig {
     protected double maxFlywheelRPM = 6000.0;
     protected double maxTurretAngle = 180.0;
     protected double minTurretAngle = -180.0;
-    protected double maxHoodAngle = 60.0;
-    protected double minHoodAngle = 0.0;
+    protected double maxHoodAngle = 70.0;
+    protected double minHoodAngle = 47.0;
 
     // Polynomial calculation models
     protected Polynomial flywheelRpmModel = Polynomial.linear(2000.0, 15.0);

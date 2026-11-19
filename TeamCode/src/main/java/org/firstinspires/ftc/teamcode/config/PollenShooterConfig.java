@@ -19,7 +19,9 @@ public class PollenShooterConfig extends ShooterConfig {
         this.flywheelKd = 0.0002;
         this.flywheelKf = 0.00018;
 
-        this.flywheelRpmModel = Polynomial.of(1800.0, 12.5, 0.02);
-        this.hoodAngleModel = Polynomial.of(20.0, 0.15);
+        //this.flywheelRpmModel = Polynomial.of(4.8403378378, 0.7418918919);
+        this.flywheelRpmModel = Polynomial.of(0.7418918919, 4.8403378378);
+        this.hoodAngleModel = Polynomial.of(87.25612603, -16.43487126, 3.72896588, -0.80113754);
+        //this.hoodAngleModel = Polynomial.of(-0.80113754, 3.72896588, -16.43487126, 87.25612603);
     }
 }
