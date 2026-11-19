@@ -13,12 +13,12 @@ public class Shooter extends SubsystemBase {
     private final Turret turret;
     private final Flywheel flywheel;
     private final Hood hood;
-    private final Supplier<Pose> pose;
+    private final Supplier<Pose> poseSupplier;
 
-    public Shooter(final HardwareMap hardwareMap, final Supplier<Pose> pose) {
+    public Shooter(final HardwareMap hardwareMap, final Supplier<Pose> poseSupplier) {
         super();
-        this.pose = pose;
-        turret = new Turret(hardwareMap, pose);
+        this.poseSupplier = poseSupplier;
+        turret = new Turret(hardwareMap, poseSupplier);
         flywheel = new Flywheel(hardwareMap);
         hood = new Hood(hardwareMap);
     }
@@ -42,7 +42,7 @@ public class Shooter extends SubsystemBase {
     }
 
     public void setTarget(double hoodAngleRad, double rpm) {
-        turret.setTargetPose(HivePositions.getHivePose(pose.get().y()));
+        turret.setTargetPose(HivePositions.getHivePose(poseSupplier.get().y()));
         hood.setVerticalAngle(hoodAngleRad);
         flywheel.setRPM(rpm);
     }
