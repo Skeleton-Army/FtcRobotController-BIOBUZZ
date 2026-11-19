@@ -105,17 +105,17 @@ public class TeleOpApp extends CommandOpMode {
             wallLeft = true;
         }
         if(currentY < 5 + halfRobotLength){
-            follower.setPose(new Pose(currentX,0 + halfRobotLength,Math.toRadians(roundedHeading)));
+            //follower.setPose(new Pose(currentX,0 + halfRobotLength,Math.toRadians(roundedHeading)));
             wallClose = true;
 
         }
         if(currentX > 139 - halfRobotWidth) {
-            wallFar = true;
+            wallRight = true;
 
         }
         if (currentY > 139 - halfRobotLength) {
-                follower.setPose(new Pose(currentX, 144 - halfRobotLength, Math.toRadians(roundedHeading)));
-            wallRight = true;
+            //follower.setPose(new Pose(currentX, 144 - halfRobotLength, Math.toRadians(roundedHeading)));
+            wallFar = true;
 
         }
 
@@ -129,23 +129,33 @@ public class TeleOpApp extends CommandOpMode {
                 follower.setPose(new Pose(0 + halfRobotWidth,144 - halfRobotLength,Math.toRadians(roundedHeading)));
                 return;
             }
-
-            follower.setPose(new Pose(0 + halfRobotWidth,currentY,Math.toRadians(roundedHeading)));
-            return;
+            else {
+                follower.setPose(new Pose(0 + halfRobotWidth, currentY, Math.toRadians(roundedHeading)));
+                return;
+            }
         }
 
         if (wallRight) {
             if (wallClose) {
-
+                follower.setPose(new Pose(144 - halfRobotWidth,0 + halfRobotLength,Math.toRadians(roundedHeading)));
                 return;
             }
 
             if (wallFar) {
-
+                follower.setPose(new Pose(144 - halfRobotWidth,144 - halfRobotLength,Math.toRadians(roundedHeading)));
                 return;
             }
-
-            follower.setPose(new Pose(144 - halfRobotWidth, currentY, Math.toRadians(roundedHeading)));
+            else {
+                follower.setPose(new Pose(144 - halfRobotWidth, currentY, Math.toRadians(roundedHeading)));
+                return;
+            }
+        }
+        if (wallFar){
+            follower.setPose(new Pose(currentX,144 - halfRobotLength,Math.toRadians(roundedHeading)));
+            return;
+        }
+        if (wallClose){
+            follower.setPose(new Pose(currentX,0+halfRobotLength,Math.toRadians(roundedHeading)));
             return;
         }
 
@@ -184,7 +194,7 @@ public class TeleOpApp extends CommandOpMode {
             targetPose = new Pose(144 - halfRobotWidth,144 - halfRobotLength,Math.toRadians(roundedHeading));
         }
 
-        goToPose(follower, targetPose);
+        goToPose(targetPose);
     }
 
     private void driveManual() {
@@ -224,7 +234,7 @@ public class TeleOpApp extends CommandOpMode {
         LynxUtil.clearBulkCache(hardwareMap);
 
         if (!follower.following()) {
-            driveManual(follower);
+            driveManual();
         }
 
         follower.update();
@@ -274,7 +284,7 @@ public class TeleOpApp extends CommandOpMode {
 
         // Update the previous button state for the next loop iteration
         previousButtonB = currentButtonB;
-        Pose closestFlower = calculateClosestFlower(follower);
+        Pose closestFlower = calculateClosestFlower();
         String flowerName;
         boolean inMiddle = false;
 
