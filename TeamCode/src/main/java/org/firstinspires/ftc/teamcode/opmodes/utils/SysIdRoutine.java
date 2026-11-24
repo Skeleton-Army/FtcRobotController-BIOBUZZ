@@ -46,7 +46,9 @@ import org.apache.commons.csv.CSVPrinter;
  *   2. PLAY, make sure the flywheel is stopped, then press A. The SysIdCommand:
  *        - measures the battery voltage and fixes the power p = V_target / V_battery_start for the whole run
  *          (the run is refused if p would exceed 1),
- *        - records PRE_REST_S at rest, then steps to p and logs the command-change time,
+ *        - if the run has a start voltage: spins up to it and waits until settled, WITHOUT recording,
+ *          then re-zeroes the clock (time_s = 0 is the first recorded moment),
+ *        - records PRE_REST_S at rest (or at the start voltage), then steps to p and logs the command-change time,
  *        - judges settling from the average speed over ~0.5 s windows of the position,
  *        - records HOLD_S more after settling, then stops the motor and saves the CSV.
  *      Press X at any time to abort (motor stops, nothing is saved).
@@ -61,6 +63,7 @@ import org.apache.commons.csv.CSVPrinter;
  *   battery_voltage_V      - most recent supply voltage reading
  *   battery_time_s         - time at which that voltage reading was taken (voltage is sampled asynchronously)
  *   command_change_time_s  - time at which the current power_command was sent
+ *                            (negative if it was sent during an unrecorded start-voltage pre-spin)
  * In MATLAB use V(t) ~= power_command * battery_voltage_V rather than the nominal target.
  * File: /sdcard/FIRST/sysid/sysid_<run>_<timestamp>.csv
  */
@@ -106,6 +109,11 @@ public class SysIdRoutine extends CommandOpMode {
         F1("F1", "test", false, 9.0, 4.0, 12.0, 6.0, 10.0),
         F2("F2", "test", false, 4.0, 10.0, 6.0),
         F3("F3", "test", false, 4.0, 10.0, 6.0),
+        D1("D1", "declaration opt", 9, true, true, 4),
+        D2("D2", "declaration opt", 12, true, true, 8),
+        D3("D3", "declaration test", 10, true, true, 5),
+        D4("D4", "declaration test", 12, true, true, 5),
+        A3("A3", "accel test", 5, true, true, 10),
         D("D", "validation", true, 7.0),
         DOWN("down", "validation", false, 8.0, 4.0); // no rest baseline: settle at 8 V, then step down to 4 V
 
@@ -114,16 +122,26 @@ public class SysIdRoutine extends CommandOpMode {
         final boolean restFirst;
         final double[] volts; // one entry per step; each step is held until settled
         final boolean fullStop;
+        final double startVolts; // > 0: spin up to this voltage first and wait until settled; none of that is recorded
 
         Run(String id, String role, boolean restFirst, double... volts) {
             this(id, role, restFirst, true, volts);
         }
 
         Run(String id, String role, boolean restFirst, boolean fullStop, double... volts) {
+            this(id, role, 0.0, restFirst, fullStop, volts);
+        }
+
+        /**
+         * With a start voltage. The steps are passed as an array to keep the overloads unambiguous,
+         * e.g. {@code new double[] {9.0, 4.0}}. If restFirst is true, PRE_REST_S is recorded at the start voltage.
+         */
+        Run(String id, String role, double startVolts, boolean restFirst, boolean fullStop, double... volts) {
             this.id = id;
             this.role = role;
             this.restFirst = restFirst;
             this.fullStop = fullStop;
+            this.startVolts = startVolts;
             this.volts = volts;
         }
 
@@ -131,6 +149,7 @@ public class SysIdRoutine extends CommandOpMode {
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder(id).append(" (").append(role).append(", ");
+            if (startVolts > 0) sb.append("start ").append(startVolts).append(" V, ");
             for (int i = 0; i < volts.length; i++) {
                 if (i > 0) sb.append(" -> ");
                 sb.append(volts[i]).append(" V");
@@ -141,10 +160,10 @@ public class SysIdRoutine extends CommandOpMode {
     // ======================================================
 
     private enum Phase {
+        PRESPIN, // optional start voltage: spin up and settle, not recorded
         REST,
         SPINUP,
         HOLD,
-        SPINDOWN,
         DONE
     }
 
@@ -301,6 +320,7 @@ public class SysIdRoutine extends CommandOpMode {
         double t, battery, position, power, windowSpeed;
 
         private double[] powers; // fixed power per step, computed once from the starting battery voltage
+        private double startPower; // fixed power for the unrecorded pre-spin (0 = no start voltage)
         private boolean rejected, timedOut;
 
         private long startNanos;
@@ -350,7 +370,22 @@ public class SysIdRoutine extends CommandOpMode {
                 }
             }
 
-            if (selectedRun.restFirst) {
+            // Optional start voltage (pre-spin): same fixed-power rule. Also used for the rest baseline, if any.
+            startPower = selectedRun.startVolts / battery;
+            if (startPower > 1.0) {
+                rejected = true;
+                status = String.format(
+                        Locale.US,
+                        "Battery %.2f V is too low for the %.1f V start voltage (power would be %.2f). Choose a lower start.",
+                        battery,
+                        selectedRun.startVolts,
+                        startPower);
+            }
+
+            if (selectedRun.startVolts > 0) {
+                phase = Phase.PRESPIN;
+                beginStep(0);
+            } else if (selectedRun.restFirst) {
                 phase = Phase.REST;
             } else {
                 phase = Phase.SPINUP;
@@ -387,7 +422,8 @@ public class SysIdRoutine extends CommandOpMode {
             if (phase == Phase.DONE) return;
 
             // ---- command: fixed power per step, timestamp taken right before it is sent ----
-            power = (phase == Phase.REST) ? 0 : powers[stage];
+            // PRESPIN and REST use the start power (0 when the run has no start voltage).
+            power = (phase == Phase.SPINUP || phase == Phase.HOLD) ? powers[stage] : startPower;
             if (power != lastPower) commandChangeT = elapsed();
             flywheel.setPower(power);
             lastPower = power;
@@ -395,9 +431,11 @@ public class SysIdRoutine extends CommandOpMode {
             // ---- sample (position is the first hardware read after the bulk cache was cleared) ----
             position = flywheel.getPositionRad();
             t = elapsed();
-            records.add(new double[] {t, position, power, battery, batteryT, commandChangeT});
+            if (phase != Phase.PRESPIN) { // the pre-spin is never recorded
+                records.add(new double[] {t, position, power, battery, batteryT, commandChangeT});
+            }
 
-            if (phase == Phase.SPINUP) detectSettling();
+            if (phase == Phase.SPINUP || phase == Phase.PRESPIN) detectSettling();
         }
 
         /** Average speed over ~0.5 s windows: compare successive windows, require a flat trend for a while. */
@@ -422,15 +460,41 @@ public class SysIdRoutine extends CommandOpMode {
                 winPos0 = position;
 
                 if (stableCount >= SETTLE_STABLE_COMPARISONS) {
-                    phase = Phase.HOLD;
-                    settledT = t;
+                    if (phase == Phase.PRESPIN) {
+                        finishPreSpin();
+                    } else {
+                        phase = Phase.HOLD;
+                        settledT = t;
+                    }
                     return;
                 }
             }
 
             if (t - stageStartT > MAX_SPINUP_S) {
-                timedOut = true;
+                if (phase == Phase.PRESPIN) {
+                    rejected = true; // nothing has been recorded yet, so there is nothing to save
+                    status = "Start voltage did not settle within MAX_SPINUP_S - nothing saved";
+                } else {
+                    timedOut = true;
+                }
                 phase = Phase.DONE;
+            }
+        }
+
+        /** The start voltage has settled: re-zero the clock so recording begins now, then continue as usual. */
+        private void finishPreSpin() {
+            double shift = elapsed();
+            startNanos += (long) (shift * 1e9);
+            // Timestamps taken before recording started now lie slightly in the past (negative), which is accurate.
+            lastBatteryReadT -= shift;
+            batteryT -= shift;
+            commandChangeT -= shift;
+
+            if (selectedRun.restFirst) {
+                phase = Phase.REST; // baseline recorded at the start voltage
+            } else {
+                phase = Phase.SPINUP;
+                beginStep(elapsed());
             }
         }
 
