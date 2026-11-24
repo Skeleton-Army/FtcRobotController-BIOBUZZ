@@ -39,7 +39,7 @@ public class BasicShooterCalculator implements ShooterCalculator {
     private final double maxHoodAngleDeg;
 
     private static final double INCH_TO_METER = 0.0254;
-    private static final double MPS_TO_RPM = 180.0; 
+    private static final double MPS_TO_RPM = 265.0;
 
     public BasicShooterCalculator(ShooterConfig config,
                                    double turretOffsetForward,
