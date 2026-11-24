@@ -1,6 +1,9 @@
 package org.firstinspires.ftc.teamcode.opmodes.utils;
 
 import android.annotation.SuppressLint;
+
+import androidx.annotation.NonNull;
+
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Utility;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -22,25 +25,44 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 
 /**
- * Flywheel system identification: low / medium / high voltage spin-up tests.
+ * Flywheel system identification (position-based step-response tests for kS / kV / kA).
  *
- * Workflow (one OpMode run = one test = one CSV file):
- *   1. INIT: use the Prompter (D-PAD + A) to pick the level and the run number, confirm on the summary.
- *   2. PLAY, then press A to start. The SysIdCommand:
- *        - records ~PRE_REST_S at rest (0 V),
- *        - applies the selected voltage and records while the flywheel accelerates,
- *        - detects when the speed has settled, records HOLD_S more seconds,
- *        - stops the motor and saves the CSV automatically.
+ * Mechanism: the assembled flywheel + transmission, forward direction only, no balls, open loop
+ * (RawPower = RUN_WITHOUT_ENCODER, no velocity controller).
+ *
+ * Runs (one OpMode run = one test = one CSV file):
+ *   A1, B1, C1, A2, B2, C2 - fitting runs (~4 / 6 / 8 V, each twice)
+ *   D                      - validation run (~7 V), excluded from the fit
+ *   DOWN                   - deceleration validation run (~8 V, settle, step down to ~4 V, settle), excluded from the fit
+ *
+ * Workflow:
+ *   1. INIT: pick the run with the Prompter (D-PAD + A). Check that spinning the flywheel forward by hand
+ *      increases the position shown, otherwise flip ENCODER_REVERSED.
+ *   2. PLAY, make sure the flywheel is stopped, then press A. The SysIdCommand:
+ *        - measures the battery voltage and fixes the power p = V_target / V_battery_start for the whole run
+ *          (the run is refused if p would exceed 1),
+ *        - records PRE_REST_S at rest, then steps to p and logs the command-change time,
+ *        - judges settling from the average speed over ~0.5 s windows of the position,
+ *        - records HOLD_S more after settling, then stops the motor and saves the CSV.
  *      Press X at any time to abort (motor stops, nothing is saved).
- *   3. Stop the OpMode, re-INIT, pick the next level / run. Do LOW, MEDIUM, HIGH, then all three again.
+ *   3. Stop the OpMode, let the flywheel stop (and the motor cool), check for loose parts / rubbing, re-INIT, pick the next run.
  *
- * CSV: time_s, voltage_V, battery_voltage_V, position_rad, velocity_rad_s
- * (voltage_V = motor power * battery voltage = the model input u)
- * File: /sdcard/FIRST/sysid/sysid_<level>_run<n>_<timestamp>.csv
+ * All samples are buffered in memory and written only after the motor has stopped.
+ *
+ * CSV columns:
+ *   time_s                 - monotonic time of the position sample
+ *   position_rad           - continuous position (motor shaft or flywheel shaft, see SHAFT_REVS_PER_MOTOR_REV)
+ *   power_command          - power sent to the motor, [-1, 1]
+ *   battery_voltage_V      - most recent supply voltage reading
+ *   battery_time_s         - time at which that voltage reading was taken (voltage is sampled asynchronously)
+ *   command_change_time_s  - time at which the current power_command was sent
+ * In MATLAB use V(t) ~= power_command * battery_voltage_V rather than the nominal target.
+ * File: /sdcard/FIRST/sysid/sysid_<run>_<timestamp>.csv
  */
 @Utility
 public class SysIdRoutine extends CommandOpMode {
@@ -48,37 +70,72 @@ public class SysIdRoutine extends CommandOpMode {
     // ======================= CONFIG =======================
     private static final String MOTOR_NAME = "flywheel";
     private static final boolean MOTOR_REVERSED = true; // flip if the wheel spins the wrong way
-    private static final boolean ENCODER_REVERSED = false; // flip if positive voltage gives negative velocity
+    private static final boolean ENCODER_REVERSED = false; // flip if forward motion gives decreasing position
 
-    private static final double PRE_REST_S = 0.25; // recorded at rest before voltage is applied
-    private static final double HOLD_S = 2.0; // extra recording after the speed has settled
-    private static final double MAX_SPINUP_S = 10.0; // give up waiting for settling after this long
+    // Which shaft does position_rad describe? 1.0 = motor shaft. For the flywheel shaft, use
+    // (flywheel revs per motor rev), e.g. 1.5 for a 1:1.5 step-up. The fitted gains correspond to that shaft.
+    private static final double SHAFT_REVS_PER_MOTOR_REV = 1.0;
 
-    private static final double SETTLE_WINDOW_S = 0.5; // speed must stay flat for this long...
-    private static final double SETTLE_TOL = 0.02; // ...within this fraction of itself
+    private static final double VEL_MOTOR_STOPPED_RPM = 50.0;
+
+    private static final double PRE_REST_S = 0.5; // recorded at rest before power is applied
+    private static final double HOLD_S = 2.0; // extra recording after the speed has settled (1-2 s)
+    private static final double MAX_SPINUP_S = 10.0; // per step: give up waiting for settling after this long
+
+    private static final double SETTLE_WINDOW_S = 0.5; // average speed is computed over windows of this length
+    private static final double SETTLE_TOL = 0.02; // successive window speeds must differ by less than this fraction
+    private static final int SETTLE_STABLE_COMPARISONS = 2; // ...this many times in a row (~1-1.5 s of no trend)
     private static final double MIN_SETTLED_VEL = 1.0; // rad/s, so "at rest" never counts as settled
-    private static final double VEL_FILTER_ALPHA = 0.2; // low-pass on velocity, used for settle detection only
 
     private static final double VOLTAGE_REFRESH_S = 0.1; // how often to re-read battery voltage (slow call)
+    private static final double TELEMETRY_PERIOD_S = 0.25; // telemetry is throttled during a run
     private static final String SAVE_DIR = "/sdcard/FIRST/sysid/";
 
-    /** Test levels. Tune the voltages for your flywheel. */
-    private enum Level {
-        LOW("low", 4.0),
-        MEDIUM("medium", 6.0),
-        HIGH("high", 8.0);
+    /** Test runs. Adjust the voltages if the low level does not move reliably or you need a wider speed range. */
+    private enum Run {
+        A1("A1", "fit", true, 4.0),
+        B1("B1", "fit", true, 6.0),
+        C1("C1", "fit", true, 8.0),
+        A2("A2", "fit", true, 4.0),
+        B2("B2", "fit", true, 6.0),
+        C2("C2", "fit", true, 8.0),
+        V1("V1", "test", true, 9.5),
+        V2("V2", "test", true, 10.0),
+        V3("V3", "test", true, 7.0),
+        V4("V4", "test", false, 9.0, 4.0),
+        F1("F1", "test", false, 9.0, 4.0, 12.0, 6.0, 10.0),
+        F2("F2", "test", false, 4.0, 10.0, 6.0),
+        F3("F3", "test", false, 4.0, 10.0, 6.0),
+        D("D", "validation", true, 7.0),
+        DOWN("down", "validation", false, 8.0, 4.0); // no rest baseline: settle at 8 V, then step down to 4 V
 
         final String id;
-        final double volts;
+        final String role;
+        final boolean restFirst;
+        final double[] volts; // one entry per step; each step is held until settled
+        final boolean fullStop;
 
-        Level(String id, double volts) {
+        Run(String id, String role, boolean restFirst, double... volts) {
+            this(id, role, restFirst, true, volts);
+        }
+
+        Run(String id, String role, boolean restFirst, boolean fullStop, double... volts) {
             this.id = id;
+            this.role = role;
+            this.restFirst = restFirst;
+            this.fullStop = fullStop;
             this.volts = volts;
         }
 
+        @NonNull
         @Override
         public String toString() {
-            return name() + " (" + volts + " V)";
+            StringBuilder sb = new StringBuilder(id).append(" (").append(role).append(", ");
+            for (int i = 0; i < volts.length; i++) {
+                if (i > 0) sb.append(" -> ");
+                sb.append(volts[i]).append(" V");
+            }
+            return sb.append(")").toString();
         }
     }
     // ======================================================
@@ -87,6 +144,7 @@ public class SysIdRoutine extends CommandOpMode {
         REST,
         SPINUP,
         HOLD,
+        SPINDOWN,
         DONE
     }
 
@@ -97,10 +155,10 @@ public class SysIdRoutine extends CommandOpMode {
 
     private boolean promptsDone = false;
     private boolean testStarted = false;
-    private Level level;
-    private int runNumber;
+    private Run selectedRun;
 
     private String status = "";
+    private long lastTelemetryNanos = 0;
 
     // ======================= OPMODE =======================
 
@@ -113,16 +171,12 @@ public class SysIdRoutine extends CommandOpMode {
         register(flywheel);
 
         // ---------- test selection (Prompter) ----------
-        // To add more options, just add enum values / prompts here.
         prompter = new Prompter(this);
-        prompter.prompt("level", new OptionPrompt<>("Select Test Level", Level.LOW, Level.MEDIUM, Level.HIGH))
-                .label("Level")
-                .prompt("run", new OptionPrompt<>("Select Run Number", 1, 2, 3))
-                .label("Run #")
+        prompter.prompt("run", new OptionPrompt<>("Select Run", Run.values()))
+                .label("Run")
                 .showSummary()
                 .onComplete(() -> {
-                    level = prompter.get("level");
-                    runNumber = prompter.get("run");
+                    selectedRun = prompter.get("run");
                     promptsDone = true;
                 });
 
@@ -147,10 +201,13 @@ public class SysIdRoutine extends CommandOpMode {
     /** Runs repeatedly during INIT (like init_loop): drives the Prompter, then shows the selection. */
     @Override
     public void initialize_loop() {
+        LynxUtil.clearBulkCache(hardwareMap);
         if (!promptsDone) {
             prompter.run();
         } else {
-            telemetry.addData("Selected", "%s, run %d", level, runNumber);
+            telemetry.addData("Selected", selectedRun);
+            telemetry.addData("Position (rad)", flywheel.getPositionRad());
+            telemetry.addLine("Spin the flywheel forward by hand: position must increase");
             telemetry.addLine("Press PLAY, then A to start the test");
             telemetry.update();
         }
@@ -162,17 +219,31 @@ public class SysIdRoutine extends CommandOpMode {
         driver.readButtons();
         super.run(); // CommandScheduler.run()
 
+        if (testStarted && CommandScheduler.getInstance().isScheduled(sysIdCommand)) {
+            // Throttle telemetry so it never slows down acquisition.
+            long now = System.nanoTime();
+            if (now - lastTelemetryNanos < TELEMETRY_PERIOD_S * 1e9) return;
+            lastTelemetryNanos = now;
+
+            telemetry.addData("Run", selectedRun);
+            telemetry.addData("Phase", sysIdCommand.phase);
+            telemetry.addData("Step", "%d/%d", sysIdCommand.stage + 1, selectedRun.volts.length);
+            telemetry.addData("Time (s)", sysIdCommand.t);
+            telemetry.addData("Power", sysIdCommand.power);
+            telemetry.addData("Battery V", sysIdCommand.battery);
+            telemetry.addData("Position (rad)", sysIdCommand.position);
+            telemetry.addData("Window speed (rad/s)", sysIdCommand.windowSpeed);
+            telemetry.addLine("X to abort");
+            telemetry.update();
+            return;
+        }
+
         if (!promptsDone) {
             telemetry.addLine("Prompts were not completed - stop and re-init");
         } else if (!testStarted) {
-            telemetry.addData("Ready", "%s, run %d", level, runNumber);
+            telemetry.addData("Ready", selectedRun);
+            telemetry.addLine("Make sure the flywheel is stopped and no balls are loaded");
             telemetry.addLine("Press A to start (X aborts)");
-        } else if (CommandScheduler.getInstance().isScheduled(sysIdCommand)) {
-            telemetry.addData("Phase", sysIdCommand.phase);
-            telemetry.addData("Time", sysIdCommand.t);
-            telemetry.addData("Battery V", sysIdCommand.battery);
-            telemetry.addData("Velocity (rad/s)", sysIdCommand.vel);
-            telemetry.addLine("X to abort");
         } else {
             telemetry.addData("Status", status);
             telemetry.addLine("Stop the OpMode and re-init for the next test");
@@ -189,6 +260,7 @@ public class SysIdRoutine extends CommandOpMode {
 
         FlywheelSubsystem(HardwareMap hardwareMap) {
             motor = new MotorEx(hardwareMap, MOTOR_NAME, Motor.GoBILDA.BARE);
+            motor.setRunMode(Motor.RunMode.RawPower); // open loop, no velocity controller
             motor.setInverted(MOTOR_REVERSED);
             voltageSensor = hardwareMap.voltageSensor.iterator().next();
         }
@@ -198,7 +270,7 @@ public class SysIdRoutine extends CommandOpMode {
         }
 
         void stop() {
-            motor.set(0);
+            motor.stopMotor();
         }
 
         /** Slow call: throttle it. */
@@ -206,16 +278,14 @@ public class SysIdRoutine extends CommandOpMode {
             return voltageSensor.getVoltage();
         }
 
+        /** Continuous position of the selected shaft (see SHAFT_REVS_PER_MOTOR_REV), in radians. */
         double getPositionRad() {
-            return encSign * ticksToRad(motor.getCurrentPosition());
+            return encSign * motor.getCurrentPosition() * (2 * Math.PI / motor.getCPR()) * SHAFT_REVS_PER_MOTOR_REV;
         }
 
-        double getVelocityRadPerSec() {
-            return encSign * ticksToRad(motor.getVelocity());
-        }
-
-        private double ticksToRad(double ticks) {
-            return ticks * (2 * Math.PI / motor.getCPR());
+        double getVelocityRpm() {
+            double motorTPS = motor.getCorrectedVelocity();
+            return (motorTPS * 60) / motor.getCPR();
         }
     }
 
@@ -223,18 +293,25 @@ public class SysIdRoutine extends CommandOpMode {
 
     /** Runs one full test. Finishes when done; interrupted (X / OpMode stop) means nothing is saved. */
     private class SysIdCommand extends CommandBase {
-        private final List<double[]> records = new ArrayList<>(2000);
+        private final List<double[]> records = new ArrayList<>(6000);
 
         // exposed for telemetry
         Phase phase = Phase.REST;
-        double t, battery, vel;
+        int stage;
+        double t, battery, position, power, windowSpeed;
+
+        private double[] powers; // fixed power per step, computed once from the starting battery voltage
+        private boolean rejected, timedOut;
 
         private long startNanos;
-        private double lastVoltageReadT;
-        private double applyT, settledT;
-        private double filtVel;
-        private double winStart, winMin, winMax;
-        private boolean timedOut;
+        private double lastBatteryReadT, batteryT;
+        private double lastPower, commandChangeT;
+        private double stageStartT, settledT;
+
+        // settling detection (average speed over successive windows of the position)
+        private boolean windowOpen;
+        private double winT0, winPos0, prevWindowSpeed;
+        private int stableCount;
 
         SysIdCommand() {
             addRequirements(flywheel);
@@ -243,84 +320,157 @@ public class SysIdRoutine extends CommandOpMode {
         @Override
         public void initialize() {
             records.clear();
-            phase = Phase.REST;
+            rejected = false;
             timedOut = false;
-            applyT = settledT = 0;
-            filtVel = 0;
-            winStart = winMin = winMax = 0;
-            lastVoltageReadT = 0;
-            battery = flywheel.getBatteryVoltage();
+            stage = 0;
+            settledT = 0;
+            lastPower = Double.NaN; // the first command sent always counts as a command change
+            commandChangeT = 0;
+            power = 0;
+            position = 0;
+
             startNanos = System.nanoTime();
+            double before = elapsed();
+            battery = flywheel.getBatteryVoltage();
+            batteryT = 0.5 * (before + elapsed());
+            lastBatteryReadT = batteryT;
+
+            // Fixed power for each step: p = V_target / V_battery_start, kept constant for the whole step.
+            powers = new double[selectedRun.volts.length];
+            for (int i = 0; i < powers.length; i++) {
+                powers[i] = selectedRun.volts[i] / battery;
+                if (powers[i] > 1.0) {
+                    rejected = true;
+                    status = String.format(
+                            Locale.US,
+                            "Battery %.2f V is too low for the %.1f V target (power would be %.2f). Choose a lower target.",
+                            battery,
+                            selectedRun.volts[i],
+                            powers[i]);
+                }
+            }
+
+            if (selectedRun.restFirst) {
+                phase = Phase.REST;
+            } else {
+                phase = Phase.SPINUP;
+                beginStep(0);
+            }
         }
 
         @Override
         public void execute() {
-            t = (System.nanoTime() - startNanos) * 1e-9;
+            if (rejected) return;
 
-            if (t - lastVoltageReadT >= VOLTAGE_REFRESH_S) {
+            double now = elapsed();
+
+            // Supply voltage is read separately (slow call), so it carries its own timestamp.
+            if (now - lastBatteryReadT >= VOLTAGE_REFRESH_S) {
                 battery = flywheel.getBatteryVoltage();
-                lastVoltageReadT = t;
+                batteryT = 0.5 * (now + elapsed());
+                lastBatteryReadT = batteryT;
             }
 
             // ---- phase transitions ----
-            if (phase == Phase.REST && t >= PRE_REST_S) {
+            if (phase == Phase.REST && now >= PRE_REST_S) {
                 phase = Phase.SPINUP;
-                applyT = t;
-                filtVel = Double.NaN; // initialised on first spin-up sample
-            }
-
-            double power = (phase == Phase.REST) ? 0 : Math.max(-1, Math.min(1, level.volts / battery));
-            flywheel.setPower(power);
-
-            double pos = flywheel.getPositionRad();
-            vel = flywheel.getVelocityRadPerSec();
-
-            records.add(new double[] {t, power * battery, battery, pos, vel});
-
-            // ---- settle detection ----
-            if (phase == Phase.SPINUP) {
-                if (Double.isNaN(filtVel)) {
-                    filtVel = vel;
-                    winStart = t;
-                    winMin = winMax = filtVel;
+                beginStep(now);
+            } else if (phase == Phase.HOLD && now - settledT >= HOLD_S) {
+                if (stage + 1 < powers.length) {
+                    stage++;
+                    phase = Phase.SPINUP;
+                    beginStep(now);
                 } else {
-                    filtVel += VEL_FILTER_ALPHA * (vel - filtVel);
-                    winMin = Math.min(winMin, filtVel);
-                    winMax = Math.max(winMax, filtVel);
-                }
-
-                if (t - winStart >= SETTLE_WINDOW_S) {
-                    double span = winMax - winMin;
-                    if (Math.abs(filtVel) > MIN_SETTLED_VEL && span <= SETTLE_TOL * Math.abs(filtVel)) {
-                        phase = Phase.HOLD;
-                        settledT = t;
-                    } else {
-                        winStart = t;
-                        winMin = winMax = filtVel;
-                    }
-                }
-
-                if (phase == Phase.SPINUP && t - applyT > MAX_SPINUP_S) {
-                    timedOut = true;
                     phase = Phase.DONE;
                 }
-            } else if (phase == Phase.HOLD && t - settledT >= HOLD_S) {
+            }
+            if (phase == Phase.DONE) return;
+
+            // ---- command: fixed power per step, timestamp taken right before it is sent ----
+            power = (phase == Phase.REST) ? 0 : powers[stage];
+            if (power != lastPower) commandChangeT = elapsed();
+            flywheel.setPower(power);
+            lastPower = power;
+
+            // ---- sample (position is the first hardware read after the bulk cache was cleared) ----
+            position = flywheel.getPositionRad();
+            t = elapsed();
+            records.add(new double[] {t, position, power, battery, batteryT, commandChangeT});
+
+            if (phase == Phase.SPINUP) detectSettling();
+        }
+
+        /** Average speed over ~0.5 s windows: compare successive windows, require a flat trend for a while. */
+        private void detectSettling() {
+            if (!windowOpen) {
+                windowOpen = true;
+                winT0 = t;
+                winPos0 = position;
+            } else if (t - winT0 >= SETTLE_WINDOW_S) {
+                double w = (position - winPos0) / (t - winT0);
+                windowSpeed = w;
+
+                if (!Double.isNaN(prevWindowSpeed)) {
+                    boolean stable = Math.abs(w) > MIN_SETTLED_VEL
+                            && Math.abs(prevWindowSpeed) > MIN_SETTLED_VEL
+                            && Math.abs(w - prevWindowSpeed) <= SETTLE_TOL * Math.abs(prevWindowSpeed);
+                    stableCount = stable ? stableCount + 1 : 0;
+                }
+
+                prevWindowSpeed = w;
+                winT0 = t;
+                winPos0 = position;
+
+                if (stableCount >= SETTLE_STABLE_COMPARISONS) {
+                    phase = Phase.HOLD;
+                    settledT = t;
+                    return;
+                }
+            }
+
+            if (t - stageStartT > MAX_SPINUP_S) {
+                timedOut = true;
                 phase = Phase.DONE;
             }
         }
 
+        private void beginStep(double now) {
+            stageStartT = now;
+            windowOpen = false;
+            prevWindowSpeed = Double.NaN;
+            windowSpeed = Double.NaN;
+            stableCount = 0;
+        }
+
+        /** Monotonic seconds since the command was initialized. */
+        private double elapsed() {
+            return (System.nanoTime() - startNanos) * 1e-9; // toSeconds
+        }
+
         @Override
         public boolean isFinished() {
-            return phase == Phase.DONE;
+            return rejected || phase == Phase.DONE;
         }
 
         @Override
         public void end(boolean interrupted) {
-            flywheel.stop();
+            flywheel.stop(); // stop first; only then touch the disk
+            if (selectedRun.fullStop) {
+                while (flywheel.getVelocityRpm() > VEL_MOTOR_STOPPED_RPM) {
+                    telemetry.addLine("Waiting for motor stop");
+                    telemetry.update();
+                }
+                telemetry.clearAll();
+                telemetry.update();
+            }
+
+            if (rejected) return; // status already explains why
             if (interrupted) {
                 status = "Aborted - nothing saved";
             } else {
-                status = timedOut ? "Timed out before settling (saving anyway)" : "Test complete";
+                status = timedOut
+                        ? "Did not settle within MAX_SPINUP_S - raise it and repeat (saving anyway)"
+                        : "Test complete";
                 saveData(records);
             }
         }
@@ -332,17 +482,23 @@ public class SysIdRoutine extends CommandOpMode {
     private void saveData(List<double[]> records) {
         File dir = new File(SAVE_DIR);
         dir.mkdirs();
-        File file = new File(dir, "sysid_" + level.id + "_run" + runNumber + "_" + System.currentTimeMillis() + ".csv");
+        File file = new File(dir, "sysid_" + selectedRun.id + "_" + System.currentTimeMillis() + ".csv");
 
         CSVFormat csvFormat = CSVFormat.DEFAULT
                 .builder()
-                .setHeader("time_s", "voltage_V", "battery_voltage_V", "position_rad", "velocity_rad_s")
+                .setHeader(
+                        "time_s",
+                        "position_rad",
+                        "power_command",
+                        "battery_voltage_V",
+                        "battery_time_s",
+                        "command_change_time_s")
                 .setAutoFlush(false)
                 .get();
 
         try (CSVPrinter printer = new CSVPrinter(new FileWriter(file), csvFormat)) {
             for (double[] r : records) {
-                printer.printRecord(r[0], r[1], r[2], r[3], r[4]);
+                printer.printRecord(r[0], r[1], r[2], r[3], r[4], r[5]);
             }
             printer.flush();
             status += " | Saved " + file.getName() + " (" + records.size() + " samples)";
