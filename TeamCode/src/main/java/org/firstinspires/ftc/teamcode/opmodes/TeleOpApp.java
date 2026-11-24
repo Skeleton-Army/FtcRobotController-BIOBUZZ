@@ -35,10 +35,10 @@ public class TeleOpApp extends CommandOpMode {
     private final int minThreshold = 150;
     private boolean currentButtonB;
 
-    private final Pose flowerRedGarden = new Pose(8, 36, Math.toRadians(180));
-    private final Pose flowerRedParking = new Pose(36, 110, Math.toRadians(90));
-    private final Pose flowerBlueGarden = new Pose(110, 90, Math.toRadians(0));
-    private final Pose flowerBlueParking = new Pose(82, 10, Math.toRadians(-90));
+    private final Pose flowerRedGarden = new Pose(13, 46, Math.toRadians(180));
+    private final Pose flowerRedParking = new Pose(45, 124, Math.toRadians(90));
+    private final Pose flowerBlueGarden = new Pose(124, 95, Math.toRadians(0));
+    private final Pose flowerBlueParking = new Pose(93, 12, Math.toRadians(-90));
 
     private Pose calculateClosestFlower(){
         double robotX = follower.pose().x();
@@ -255,6 +255,8 @@ public class TeleOpApp extends CommandOpMode {
             if (passedTime > minThreshold && !isHoldingIntake) {
                 isHoldingIntake = true;
                 schedule(new InstantCommand(intake::startIntake));
+                //schedule(new InstantCommand(intake::startTransfer));
+
             }
         }
         // 3. FALLING EDGE: Button was just released this loop cycle
