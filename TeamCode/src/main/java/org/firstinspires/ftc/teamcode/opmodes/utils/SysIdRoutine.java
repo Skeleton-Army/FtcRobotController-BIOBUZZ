@@ -96,26 +96,41 @@ public class SysIdRoutine extends CommandOpMode {
 
     /** Test runs. Adjust the voltages if the low level does not move reliably or you need a wider speed range. */
     private enum Run {
-        A1("A1", "fit", true, 4.0),
-        B1("B1", "fit", true, 6.0),
-        C1("C1", "fit", true, 8.0),
-        A2("A2", "fit", true, 4.0),
-        B2("B2", "fit", true, 6.0),
-        C2("C2", "fit", true, 8.0),
-        V1("V1", "test", true, 9.5),
-        V2("V2", "test", true, 10.0),
-        V3("V3", "test", true, 7.0),
-        V4("V4", "test", false, 9.0, 4.0),
-        F1("F1", "test", false, 9.0, 4.0, 12.0, 6.0, 10.0),
-        F2("F2", "test", false, 4.0, 10.0, 6.0),
-        F3("F3", "test", false, 4.0, 10.0, 6.0),
-        D1("D1", "declaration opt", 9, true, true, 4),
-        D2("D2", "declaration opt", 12, true, true, 8),
-        D3("D3", "declaration test", 10, true, true, 5),
-        D4("D4", "declaration test", 12, true, true, 5),
-        A3("A3", "accel test", 5, true, true, 10),
-        D("D", "validation", true, 7.0),
-        DOWN("down", "validation", false, 8.0, 4.0); // no rest baseline: settle at 8 V, then step down to 4 V
+        /*
+        // ---- fitting runs: step up from rest, fixed voltage, each done twice ----
+        FIT_4V_1("fit_4v_1", "fit", true, 4.0),
+        FIT_6V_1("fit_6v_1", "fit", true, 6.0),
+        FIT_8V_1("fit_8v_1", "fit", true, 8.0),
+        FIT_4V_2("fit_4v_2", "fit", true, 4.0),
+        FIT_6V_2("fit_6v_2", "fit", true, 6.0),
+        FIT_8V_2("fit_8v_2", "fit", true, 8.0),
+
+        // ---- exploratory: step up from rest at higher voltages ----
+        TEST_UP_9_5V("test_up_9_5v", "test", true, 9.5),
+        TEST_UP_10V("test_up_10v", "test", true, 10.0),
+        TEST_UP_7V("test_up_7v", "test", true, 7.0),
+
+        // ---- exploratory: step sequences, no rest baseline ----
+        TEST_9V_TO_4V("test_9v_to_4v", "test", false, 9.0, 4.0),
+        TEST_SEQ_9_4_12_6_10V("test_seq_9_4_12_6_10v", "test", false, 9.0, 4.0, 12.0, 6.0, 10.0),
+        TEST_SEQ_4_10_6V_1("test_seq_4_10_6v_1", "test", false, 4.0, 10.0, 6.0),
+        TEST_SEQ_4_10_6V_2("test_seq_4_10_6v_2", "test", false, 4.0, 10.0, 6.0),
+
+         */
+
+        // ---- deceleration: start high, step down ----
+        DECEL_OPT_1("decel_opt_9_to_4v", "deceleration opt", 9, true, true, 4),
+        DECEL_OPT_2("decel_opt_12_to_8v", "deceleration opt", 12, true, true, 8),
+        DECEL_TEST_1("decel_test_10_to_5v", "deceleration test", 10, true, true, 5),
+        DECEL_TEST_2("decel_test_12_to_5v", "deceleration test", 12, true, true, 5),
+        DECEL_TEST_3("decel_test_11_to_6v", "decel_test", 11, true, true, 6),
+
+        // ---- acceleration: start low, step up ----
+        ACCEL_TEST_5_TO_10V("accel_test_5_to_10v", "accel test", 5, true, true, 10),
+
+        // ---- held-out validation ----
+        VAL_7V("val_7v", "validation", true, 7.0),
+        VAL_8V_TO_4V("val_8v_to_4v", "validation", false, 8.0, 4.0); // no rest baseline: settle at 8 V, then step down to 4 V
 
         final String id;
         final String role;
@@ -282,6 +297,7 @@ public class SysIdRoutine extends CommandOpMode {
             motor.setRunMode(Motor.RunMode.RawPower); // open loop, no velocity controller
             motor.setInverted(MOTOR_REVERSED);
             voltageSensor = hardwareMap.voltageSensor.iterator().next();
+            motor.resetEncoder();
         }
 
         void setPower(double power) {
@@ -519,14 +535,19 @@ public class SysIdRoutine extends CommandOpMode {
         @Override
         public void end(boolean interrupted) {
             flywheel.stop(); // stop first; only then touch the disk
+            /*
             if (selectedRun.fullStop) {
                 while (flywheel.getVelocityRpm() > VEL_MOTOR_STOPPED_RPM) {
                     telemetry.addLine("Waiting for motor stop");
+                    telemetry.addData("Current RPM", flywheel.getVelocityRpm());
                     telemetry.update();
                 }
                 telemetry.clearAll();
                 telemetry.update();
             }
+             */
+
+
 
             if (rejected) return; // status already explains why
             if (interrupted) {
