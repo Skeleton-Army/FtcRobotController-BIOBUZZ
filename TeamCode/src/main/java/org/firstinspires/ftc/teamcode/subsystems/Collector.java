@@ -30,9 +30,15 @@ public class Collector extends SubsystemBase {
         stopper.block();
     }
 
+    public void ejectIntake(){
+        intake.reverseIntake();
+        stopper.block();
+    }
+
     public void stop() {
         intake.stopIntake();
         transfer.stopTransfer();
         stopper.block();
     }
 }
+
