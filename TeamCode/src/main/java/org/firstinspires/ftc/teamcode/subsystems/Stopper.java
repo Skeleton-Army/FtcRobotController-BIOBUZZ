@@ -18,15 +18,13 @@ public class Stopper extends SubsystemBase {
 
     public void block() {
         stopper.set(BLOCK_POS);
-        isBlocking = true;
     }
 
     public void release() {
         stopper.set(RELEASE_POS);
-        isBlocking = false;
     }
 
     public boolean isBlocking() {
-        return isBlocking;
+        return stopper.get() == BLOCK_POS;
     }
 }
