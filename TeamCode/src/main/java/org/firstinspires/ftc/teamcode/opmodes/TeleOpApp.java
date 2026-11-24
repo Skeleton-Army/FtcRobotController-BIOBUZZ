@@ -11,6 +11,7 @@ import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
+import com.skeletonarmy.marrow.BulkCaching;
 import com.skeletonarmy.marrow.LynxUtil;
 import com.pedropathing.paths.Path;
 
@@ -18,11 +19,14 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Intake;
 
 @TeleOp(name="TeleOp")
+@BulkCaching(mode = LynxModule.BulkCachingMode.MANUAL)
 public class TeleOpApp extends CommandOpMode {
     private Follower follower;
     private Intake intake;
     private GamepadEx gamepad;
-    private final Pose startPose = new Pose(17.785 / 2, 17.323 / 2, Math.toRadians(0));
+    private double halfRobotWidth = 17.785 / 2;
+    private double halfRobotLength = 17.323 / 2;
+    private final Pose startPose = new Pose(halfRobotWidth, halfRobotLength, Math.toRadians(0));
     private boolean previousButtonB = false;
     private long lastPressButtonB = 0;
     private boolean isHoldingIntake = false;
@@ -83,16 +87,14 @@ public class TeleOpApp extends CommandOpMode {
         double currentHeading = Math.toDegrees(follower.pose().heading());
         double roundedHeading = Math.round(currentHeading / 90) * 90;
 
-        double halfRobotWidth; // = 17.785
-        double halfRobotLength; //  = 17.323
 
         if (roundedHeading == 0 || roundedHeading == 180) {
-            halfRobotWidth = 17.785 / 2;
-            halfRobotLength = 17.323 / 2;
+            halfRobotWidth = halfRobotWidth;
+            halfRobotLength = halfRobotLength;
         }
         else {
-            halfRobotWidth = 17.323 / 2;
-            halfRobotLength = 17.785 / 2;
+            halfRobotWidth = halfRobotLength;
+            halfRobotLength = halfRobotWidth;
         }
 
         boolean wallLeft = false;
@@ -127,12 +129,12 @@ public class TeleOpApp extends CommandOpMode {
 
             if (wallFar) {
                 follower.setPose(new Pose(0 + halfRobotWidth,144 - halfRobotLength,Math.toRadians(roundedHeading)));
-                return;
             }
             else {
                 follower.setPose(new Pose(0 + halfRobotWidth, currentY, Math.toRadians(roundedHeading)));
-                return;
             }
+
+            return;
         }
 
         if (wallRight) {
@@ -143,12 +145,12 @@ public class TeleOpApp extends CommandOpMode {
 
             if (wallFar) {
                 follower.setPose(new Pose(144 - halfRobotWidth,144 - halfRobotLength,Math.toRadians(roundedHeading)));
-                return;
             }
             else {
                 follower.setPose(new Pose(144 - halfRobotWidth, currentY, Math.toRadians(roundedHeading)));
-                return;
             }
+
+            return;
         }
         if (wallFar){
             follower.setPose(new Pose(currentX,144 - halfRobotLength,Math.toRadians(roundedHeading)));
@@ -167,12 +169,10 @@ public class TeleOpApp extends CommandOpMode {
         int currentHeading = (int) Math.toDegrees(follower.pose().heading());
         double roundedHeading = Math.round(currentHeading / 90.0) * 90;
 
-        double halfRobotWidth; // = 17.785
-        double halfRobotLength; //  = 17.323
 
         if (roundedHeading == 0 || roundedHeading == 180) {
-            halfRobotWidth = 17.785 / 2;
-            halfRobotLength = 17.323 / 2;
+            halfRobotWidth = halfRobotWidth;
+            halfRobotLength = halfRobotLength;
         }
         else {
             halfRobotWidth = 17.323 / 2;
@@ -207,7 +207,7 @@ public class TeleOpApp extends CommandOpMode {
 
     @Override
     public void initialize() {
-        LynxUtil.setBulkCachingMode(hardwareMap, LynxModule.BulkCachingMode.MANUAL);
+        LynxUtil.clearBulkCache(hardwareMap);
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
 
         follower = Constants.create(hardwareMap);
@@ -258,7 +258,7 @@ public class TeleOpApp extends CommandOpMode {
             }
         }
         // 3. FALLING EDGE: Button was just released this loop cycle
-        else if (!currentButtonB && previousButtonB) {
+        else if (previousButtonB) {
             long passedTime = System.currentTimeMillis() - lastPressButtonB;
 
             // Short tap (under minThreshold): flip the toggle state
