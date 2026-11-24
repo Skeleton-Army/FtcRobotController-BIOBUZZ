@@ -38,6 +38,9 @@ public class BasicShooterCalculator implements ShooterCalculator {
     /** Largest launch pitch (degrees) the hood can physically reach. From the config. */
     private final double maxHoodAngleDeg;
 
+    private static final double INCH_TO_METER = 0.0254;
+    private static final double MPS_TO_RPM = 180.0; 
+
     public BasicShooterCalculator(ShooterConfig config,
                                    double turretOffsetForward,
                                    double turretOffsetLeft) {
@@ -71,6 +74,7 @@ public class BasicShooterCalculator implements ShooterCalculator {
         double dx = goalX - turretX;
         double dy = goalY - turretY;
         double distance = Math.hypot(dx, dy);
+
         OpModeManager.getTelemetry().addData("goal x", goalX);
         OpModeManager.getTelemetry().addData("goal y", goalY);
         OpModeManager.getTelemetry().addData("turret x", turretX);
@@ -79,8 +83,11 @@ public class BasicShooterCalculator implements ShooterCalculator {
         double fieldAngleToGoal = Math.atan2(dy, dx);
 
         // Direct polynomial outputs from distance
-        int targetRpm = calculateFlywheelRpm(distance);
-        double hoodAngleDeg = calculateHoodAngleDegrees(distance);
+
+
+        double distanceM = distance * INCH_TO_METER;
+        int targetRpm = (int) Math.round(flywheelRpmModel.evaluate(distanceM) * MPS_TO_RPM);
+        double hoodAngleDeg = hoodAngleModel.evaluate(distanceM);
 
         // Project robot velocity onto axes perpendicular and parallel to the goal line
         // to adjust turret lead angle without requiring an exit speed variable
@@ -105,6 +112,7 @@ public class BasicShooterCalculator implements ShooterCalculator {
         OpModeManager.getTelemetry().addData("hood Angle (calc)", hoodAngleDeg);
         // Keep physical hood bounds check
         boolean isHoodAngleReachable = isHoodAngleValid(hoodAngleDeg);
+        OpModeManager.getTelemetry().addData("isHoodAngleValid", isHoodAngleReachable);
 
         return new ShooterSolution(
                 compensatedRpm,
@@ -123,7 +131,7 @@ public class BasicShooterCalculator implements ShooterCalculator {
     }
 
     public double calculateHoodAngleDegrees(double distance) {
-        OpModeManager.getTelemetry().addData("hood Angle (calc hood)", hoodAngleModel.evaluate(distance));
+        OpModeManager.getTelemetry().addData("hood Angle (calc hood in calc)", hoodAngleModel.evaluate(distance));
         return hoodAngleModel.evaluate(distance);
     }
 
