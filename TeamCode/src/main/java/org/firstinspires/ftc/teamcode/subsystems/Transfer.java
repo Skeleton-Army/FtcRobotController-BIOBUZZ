@@ -14,6 +14,11 @@ public class Transfer extends SubsystemBase {
         transfer = new MotorEx(hardwareMap, TRANSFER_NAME, TRANSFER_MOTOR);
     }
 
+    public double getRPM() {
+        double motorTPS = transfer.getCorrectedVelocity();
+        return (motorTPS * 60.0) / transfer.getCPR();
+    }
+
     public void startTransfer() {
         transfer.set(TRANSFER_POWER);
     }
