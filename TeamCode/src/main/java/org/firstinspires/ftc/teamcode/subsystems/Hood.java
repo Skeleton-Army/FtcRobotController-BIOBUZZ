@@ -1,22 +1,23 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.teamcode.config.HoodConfig.*;
-
 import androidx.core.math.MathUtils;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.hardware.servos.ServoEx;
+import org.firstinspires.ftc.teamcode.config.interfaces.HoodConfig;
 
 /**
  * Subsystem placeholder for controlling the shooter hood angle (vertical launch pitch).
  */
 public class Hood extends SubsystemBase {
     private final ServoEx hood;
+    private final HoodConfig config;
 
-    public Hood(final HardwareMap hardwareMap) {
+    public Hood(final HardwareMap hardwareMap, HoodConfig hoodConfig) {
         super();
+        config = hoodConfig;
         // Measurements given by hardware, if problem blame Tzipi.
-        hood = new ServoEx(hardwareMap, HOOD_NAME);
+        hood = new ServoEx(hardwareMap, config.getHoodName());
     }
 
     public double getRawHoodPosition() {
@@ -30,13 +31,14 @@ public class Hood extends SubsystemBase {
     public double getHoodAngle() {
         double pos = getRawHoodPosition();
 
-        double normalizedPos = (pos - HOOD_POSSIBLE_MIN) / (HOOD_POSSIBLE_MAX - HOOD_POSSIBLE_MIN);
+        double normalizedPos =
+                (pos - config.getHoodPossibleMin()) / (config.getHoodPossibleMax() - config.getHoodPossibleMin());
 
-        if (HOOD_INVERTED) {
+        if (config.isHoodInverted()) {
             normalizedPos = 1.0 - normalizedPos;
         }
 
-        return HOOD_MIN + (normalizedPos * (HOOD_MAX - HOOD_MIN));
+        return config.getHoodMin() + (normalizedPos * (config.getHoodMax() - config.getHoodMin()));
     }
 
     public double getHoodAngleDegrees() {
@@ -50,14 +52,15 @@ public class Hood extends SubsystemBase {
      * @param angleRad the target hood angle in radians
      */
     public void setVerticalAngle(double angleRad) {
-        double clampedAngle = MathUtils.clamp(angleRad, HOOD_USABLE_MIN, HOOD_USABLE_MAX);
+        double clampedAngle = MathUtils.clamp(angleRad, config.getHoodUsableMin(), config.getHoodUsableMax());
 
-        double t = (clampedAngle - HOOD_MIN) / (HOOD_MAX - HOOD_MIN);
+        double t = (clampedAngle - config.getHoodMin()) / (config.getHoodMax() - config.getHoodMin());
 
-        double targetPos = HOOD_POSSIBLE_MIN + (t * (HOOD_POSSIBLE_MAX - HOOD_POSSIBLE_MIN));
+        double targetPos =
+                config.getHoodPossibleMin() + (t * (config.getHoodPossibleMax() - config.getHoodPossibleMin()));
 
-        if (HOOD_INVERTED) {
-            targetPos = HOOD_POSSIBLE_MAX - (targetPos - HOOD_POSSIBLE_MIN);
+        if (config.isHoodInverted()) {
+            targetPos = config.getHoodPossibleMax() - (targetPos - config.getHoodPossibleMin());
         }
 
         hood.set(targetPos);

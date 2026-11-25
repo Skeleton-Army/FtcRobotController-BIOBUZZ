@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.teamcode.config.FlywheelConfig.*;
-
 import androidx.core.math.MathUtils;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.RobotLog;
@@ -9,14 +7,15 @@ import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.controller.PIDController;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.skeletonarmy.marrow.TimerEx;
-
-import org.firstinspires.ftc.teamcode.utils.MovingAverage;
-
 import java.util.concurrent.TimeUnit;
+import org.firstinspires.ftc.teamcode.config.interfaces.FlywheelConfig;
+import org.firstinspires.ftc.teamcode.utils.MathUtilities;
+import org.firstinspires.ftc.teamcode.utils.MovingAverage;
 
 public class Flywheel extends SubsystemBase {
     private final MotorEx flywheel;
     private final PIDController flywheelPID;
+    private final FlywheelConfig config;
     private final double NOMINAL_VOLTAGE = 12;
     private double voltage = NOMINAL_VOLTAGE;
     private double targetTPS;
@@ -34,20 +33,21 @@ public class Flywheel extends SubsystemBase {
     private boolean disabled = false;
     private boolean emergencyStop = false;
 
-    public Flywheel(final HardwareMap hardwareMap) {
+    public Flywheel(final HardwareMap hardwareMap, FlywheelConfig flywheelConfig) {
         super();
+        this.config = flywheelConfig;
         flywheel = new MotorEx(
                 hardwareMap,
-                FLYWHEEL_NAME,
-                FLYWHEEL_MOTOR.getCPR() * FLYWHEEL_GEAR_RATIO,
-                FLYWHEEL_MOTOR.getRPM() / FLYWHEEL_GEAR_RATIO);
-        flywheel.setInverted(FLYWHEEL_INVERTED);
+                config.getFlywheelName(),
+                config.getFlywheelMotor().getCPR() * config.getFlywheelGearRatio(),
+                config.getFlywheelMotor().getRPM() / config.getFlywheelGearRatio());
+        flywheel.setInverted(config.isFlywheelInverted());
 
-        flywheel.setVeloCoefficients(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
-        flywheel.setFeedforwardCoefficients(FLYWHEEL_KS, FLYWHEEL_KV, FLYWHEEL_KA);
+        flywheel.setVeloCoefficients(config.getFlywheelKp(), config.getFlywheelKi(), config.getFlywheelKd());
+        flywheel.setFeedforwardCoefficients(config.getFlywheelKs(), config.getFlywheelKv(), config.getFlywheelKa());
         flywheel.setRunMode(MotorEx.RunMode.RawPower);
 
-        flywheelPID = new PIDController(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
+        flywheelPID = new PIDController(config.getFlywheelKp(), config.getFlywheelKi(), config.getFlywheelKd());
 
         rampTimer = new TimerEx(TimeUnit.SECONDS);
 
@@ -76,19 +76,20 @@ public class Flywheel extends SubsystemBase {
         double targetRPM = Math.abs(getTargetRPM());
 
         // 1. Encoder Direction Check
-        if ((getRPM() < -WRONG_DIRECTION_RPM_THRESHOLD && targetRPM > 0)
-                || (getRPM() > WRONG_DIRECTION_RPM_THRESHOLD && targetRPM < 0)) {
+        if ((getRPM() < -config.getWrongDirectionRpmThreshold() && targetRPM > 0)
+                || (getRPM() > config.getWrongDirectionRpmThreshold() && targetRPM < 0)) {
             RobotLog.addGlobalWarningMessage("FLYWHEEL IS SPINNING IN THE WRONG DIRECTION.");
             return true;
         }
 
         // 2. Conflict/Stall Check
-        boolean isStalling = targetRPM > STALL_TARGET_RPM_THRESHOLD && currentRPM < STALL_ACTUAL_RPM_THRESHOLD;
+        boolean isStalling =
+                targetRPM > config.getStallTargetRpmThreshold() && currentRPM < config.getStallActualRpmThreshold();
 
         if (isStalling) {
             stallTimer.start();
 
-            if (stallTimer.getElapsed() > STALL_TIMEOUT) {
+            if (stallTimer.getElapsed() > config.getStallTimeout()) {
                 RobotLog.addGlobalWarningMessage(
                         "FLYWHEEL STALL DETECTED. ONE OF THE FLYWHEEL MOTORS IS PROBABLY REVERSED.");
                 return true;
@@ -145,10 +146,11 @@ public class Flywheel extends SubsystemBase {
         }
 
         double dt = (currentTime - lastFilteredRPMTime) / NANOS_PER_SECOND;
-        if (dt < MIN_DT_SECONDS) dt = MIN_DT_SECONDS;
+        if (dt < config.getMinDtSeconds()) dt = config.getMinDtSeconds();
 
         double rawAccel = (currentRPM - lastFilteredRPM) / dt; // RPM/s
-        filteredRPMAccel = MathUtilities.lowPassFilter(rawAccel, filteredRPMAccel, FLYWHEEL_ACCEL_FILTER_ALPHA);
+        filteredRPMAccel =
+                MathUtilities.lowPassFilter(rawAccel, filteredRPMAccel, config.getFlywheelAccelFilterAlpha());
 
         lastFilteredRPM = currentRPM;
         lastFilteredRPMTime = currentTime;
@@ -169,10 +171,10 @@ public class Flywheel extends SubsystemBase {
         if (lastLoopTime == 0) lastLoopTime = currentTime;
         double dt = (currentTime - lastLoopTime) / NANOS_PER_SECOND;
         lastLoopTime = currentTime;
-        if (dt < MIN_DT_SECONDS) dt = MIN_DT_SECONDS;
+        if (dt < config.getMinDtSeconds()) dt = config.getMinDtSeconds();
 
         if (!rampTimer.isOn()) rampTimer.resume();
-        double rampMultiplier = Math.min(rampTimer.getElapsed() / INITIAL_RAMP_DURATION, 1.0);
+        double rampMultiplier = Math.min(rampTimer.getElapsed() / config.getInitialRampDuration(), 1.0);
 
         // 'speed' is our Target Velocity
         double speed = targetTPS * rampMultiplier;
@@ -180,17 +182,19 @@ public class Flywheel extends SubsystemBase {
         double tpsPerRPM = flywheel.getCPR() / SECONDS_PER_MINUTE;
         double processVariable = getRPM() * tpsPerRPM;
 
-        flywheelPID.setPID(FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD);
+        flywheelPID.setPID(config.getFlywheelKp(), config.getFlywheelKi(), config.getFlywheelKd());
 
         // 3. Calculate Acceleration for Feedforward
         double targetAcceleration = (speed - lastSpeedFlywheel) / dt;
-        double currentKA = FLYWHEEL_KA;
+        double currentKA = config.getFlywheelKa();
 
         // PID and FF now output volts directly
         double pid = flywheelPID.calculate(processVariable, speed);
 
         // Feedforward calculates based on TARGET (speed), not measurement
-        double ff = (FLYWHEEL_KS * Math.signum(speed)) + (FLYWHEEL_KV * speed) + (currentKA * targetAcceleration);
+        double ff = (config.getFlywheelKs() * Math.signum(speed))
+                + (config.getFlywheelKv() * speed)
+                + (currentKA * targetAcceleration);
 
         lastSpeedFlywheel = speed;
 

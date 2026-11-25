@@ -1,11 +1,12 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.teamcode.config.FlywheelConfig.RPM_REACHED_THRESHOLD;
+import static org.firstinspires.ftc.teamcode.config.pollen.PollenFlywheelConfig.RPM_REACHED_THRESHOLD;
 
 import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import java.util.function.Supplier;
+import org.firstinspires.ftc.teamcode.config.interfaces.ShooterConfig;
 import org.firstinspires.ftc.teamcode.consts.HivePositions;
 
 public class Shooter extends SubsystemBase {
@@ -13,13 +14,15 @@ public class Shooter extends SubsystemBase {
     private final Flywheel flywheel;
     private final Hood hood;
     private final Supplier<Pose> poseSupplier;
+    private final ShooterConfig config;
 
-    public Shooter(final HardwareMap hardwareMap, final Supplier<Pose> poseSupplier) {
+    public Shooter(final HardwareMap hardwareMap, final Supplier<Pose> poseSupplier, ShooterConfig shooterConfig) {
         super();
+        config = shooterConfig;
         this.poseSupplier = poseSupplier;
-        turret = new Turret(hardwareMap, poseSupplier);
-        flywheel = new Flywheel(hardwareMap);
-        hood = new Hood(hardwareMap);
+        turret = new Turret(hardwareMap, shooterConfig.getTurretConfig(), poseSupplier);
+        flywheel = new Flywheel(hardwareMap, shooterConfig.getFlywheelConfig());
+        hood = new Hood(hardwareMap, shooterConfig.getHoodConfig());
     }
 
     @Override

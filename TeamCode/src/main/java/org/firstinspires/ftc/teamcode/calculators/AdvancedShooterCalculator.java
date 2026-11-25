@@ -1,8 +1,8 @@
 package org.firstinspires.ftc.teamcode.calculators;
 
 import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
-import org.firstinspires.ftc.teamcode.config.ShooterConfig;
-import org.firstinspires.ftc.teamcode.utilities.Polynomial;
+import org.firstinspires.ftc.teamcode.config.interfaces.ShooterConfig;
+import org.firstinspires.ftc.teamcode.utils.Polynomial;
 
 /**
  * Polynomial-based implementation of {@link ShooterCalculator}.
@@ -60,15 +60,16 @@ public class AdvancedShooterCalculator implements ShooterCalculator {
     /** Largest launch pitch (radians) the hood can physically reach. From the config. */
     private final double hoodMaxRadians;
 
-    public AdvancedShooterCalculator(ShooterConfig config,
-                                  Polynomial exitSpeedModel,
-                                  Polynomial speedToRpmModel,
-                                  Polynomial minAllowedSpeedModel,
-                                  Polynomial maxAllowedSpeedModel,
-                                  double lowerSpeedBuffer,
-                                  double upperSpeedBuffer,
-                                  double turretOffsetForward,
-                                  double turretOffsetLeft) {
+    public AdvancedShooterCalculator(
+            ShooterConfig config,
+            Polynomial exitSpeedModel,
+            Polynomial speedToRpmModel,
+            Polynomial minAllowedSpeedModel,
+            Polynomial maxAllowedSpeedModel,
+            double lowerSpeedBuffer,
+            double upperSpeedBuffer,
+            double turretOffsetForward,
+            double turretOffsetLeft) {
         if (config == null) {
             throw new IllegalArgumentException("ShooterConfig cannot be null");
         }
@@ -76,7 +77,7 @@ public class AdvancedShooterCalculator implements ShooterCalculator {
             throw new IllegalArgumentException(
                     "speedToRpmModel must be linear (2 coefficients) so RPM can be converted back to speed.");
         }
-        this.hoodAngleModel = config.getHoodAngleModel();
+        this.hoodAngleModel = config.getHoodConfig().getModel();
         this.exitSpeedModel = exitSpeedModel;
         this.speedToRpmModel = speedToRpmModel;
         this.minAllowedSpeedModel = minAllowedSpeedModel;
@@ -85,8 +86,8 @@ public class AdvancedShooterCalculator implements ShooterCalculator {
         this.upperSpeedBuffer = upperSpeedBuffer;
         this.turretOffsetForward = turretOffsetForward;
         this.turretOffsetLeft = turretOffsetLeft;
-        this.hoodMinRadians = Math.toRadians(config.getMinHoodAngle());
-        this.hoodMaxRadians = Math.toRadians(config.getMaxHoodAngle());
+        this.hoodMinRadians = config.getHoodConfig().getHoodMin();
+        this.hoodMaxRadians = config.getHoodConfig().getHoodMax();
     }
 
     // ------------------------------------------------------------------
@@ -107,10 +108,15 @@ public class AdvancedShooterCalculator implements ShooterCalculator {
      * @return Full solution containing flywheel RPM, turret angle, hood angle, exit speed, and shot validity.
      */
     @Override
-    public ShooterSolution calculate(double robotX, double robotY, double robotHeading,
-                                     double goalX, double goalY,
-                                     double robotVelocityX, double robotVelocityY,
-                                     double currentFlywheelRpm) {
+    public ShooterSolution calculate(
+            double robotX,
+            double robotY,
+            double robotHeading,
+            double goalX,
+            double goalY,
+            double robotVelocityX,
+            double robotVelocityY,
+            double currentFlywheelRpm) {
         // Calculate turret pivot field position and distance/angle to goal
         double cosHeading = Math.cos(robotHeading);
         double sinHeading = Math.sin(robotHeading);
@@ -189,12 +195,11 @@ public class AdvancedShooterCalculator implements ShooterCalculator {
         double minSpeed = minAllowedSpeedModel.evaluate(distance) + bandShift;
         double maxSpeed = maxAllowedSpeedModel.evaluate(distance) + bandShift;
 
-        return exitSpeed >= minSpeed - lowerSpeedBuffer
-                && exitSpeed <= maxSpeed + upperSpeedBuffer;
+        return exitSpeed >= minSpeed - lowerSpeedBuffer && exitSpeed <= maxSpeed + upperSpeedBuffer;
     }
 
-    public double calculateTurretAngleDegrees(double robotX, double robotY, double robotHeading,
-                                              double goalX, double goalY) {
+    public double calculateTurretAngleDegrees(
+            double robotX, double robotY, double robotHeading, double goalX, double goalY) {
         double cosHeading = Math.cos(robotHeading);
         double sinHeading = Math.sin(robotHeading);
 

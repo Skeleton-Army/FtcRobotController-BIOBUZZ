@@ -20,8 +20,8 @@ public class ShooterSolution {
      * @param hoodAngleDegrees Target pitch angle for the hood in degrees
      * @param isShotPossible True if the hood can reach the angle and speed is valid
      */
-    public ShooterSolution(double flywheelRPM, double turretAngleDegrees, double hoodAngleDegrees,
-                            boolean isShotPossible) {
+    public ShooterSolution(
+            double flywheelRPM, double turretAngleDegrees, double hoodAngleDegrees, boolean isShotPossible) {
         this.flywheelRPM = flywheelRPM;
         this.turretAngleDegrees = turretAngleDegrees;
         this.hoodAngleDegrees = hoodAngleDegrees;
@@ -48,15 +48,14 @@ public class ShooterSolution {
         return hoodAngleDegrees;
     }
 
-
-
     public boolean isShotPossible() {
         return isShotPossible;
     }
 
     @Override
     public String toString() {
-        return String.format("ShooterSolution{RPM=%.1f, Turret=%.2f deg, Hood=%.2f deg, ReqSpeed=%.2f m/s, Possible=%b}",
+        return String.format(
+                "ShooterSolution{RPM=%.1f, Turret=%.2f deg, Hood=%.2f deg, ReqSpeed=%.2f m/s, Possible=%b}",
                 flywheelRPM, turretAngleDegrees, hoodAngleDegrees, isShotPossible);
     }
 }

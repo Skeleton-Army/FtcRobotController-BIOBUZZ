@@ -1,9 +1,8 @@
 package org.firstinspires.ftc.teamcode.calculators;
 
 import com.skeletonarmy.marrow.OpModeManager;
-
-import org.firstinspires.ftc.teamcode.config.ShooterConfig;
-import org.firstinspires.ftc.teamcode.utilities.Polynomial;
+import org.firstinspires.ftc.teamcode.config.interfaces.ShooterConfig;
+import org.firstinspires.ftc.teamcode.utils.Polynomial;
 
 /**
  * Direct polynomial-based implementation of {@link ShooterCalculator} without
@@ -41,18 +40,16 @@ public class BasicShooterCalculator implements ShooterCalculator {
     private static final double INCH_TO_METER = 0.0254;
     private static final double MPS_TO_RPM = 265.0;
 
-    public BasicShooterCalculator(ShooterConfig config,
-                                   double turretOffsetForward,
-                                   double turretOffsetLeft) {
+    public BasicShooterCalculator(ShooterConfig config, double turretOffsetForward, double turretOffsetLeft) {
         if (config == null) {
             throw new IllegalArgumentException("ShooterConfig cannot be null");
         }
-        this.flywheelRpmModel = config.getFlywheelRpmModel();
-        this.hoodAngleModel = config.getHoodAngleModel();
+        this.flywheelRpmModel = config.getFlywheelConfig().getModel();
+        this.hoodAngleModel = config.getHoodConfig().getModel();
         this.turretOffsetForward = turretOffsetForward;
         this.turretOffsetLeft = turretOffsetLeft;
-        this.minHoodAngleDeg = config.getMinHoodAngle();
-        this.maxHoodAngleDeg = config.getMaxHoodAngle();
+        this.minHoodAngleDeg = Math.toDegrees(config.getHoodConfig().getHoodMin());
+        this.maxHoodAngleDeg = Math.toDegrees(config.getHoodConfig().getHoodMax());
     }
 
     // ------------------------------------------------------------------
@@ -60,10 +57,15 @@ public class BasicShooterCalculator implements ShooterCalculator {
     // ------------------------------------------------------------------
 
     @Override
-    public ShooterSolution calculate(double robotX, double robotY, double robotHeading,
-                                     double goalX, double goalY,
-                                     double robotVelocityX, double robotVelocityY,
-                                     double currentFlywheelRpm) {
+    public ShooterSolution calculate(
+            double robotX,
+            double robotY,
+            double robotHeading,
+            double goalX,
+            double goalY,
+            double robotVelocityX,
+            double robotVelocityY,
+            double currentFlywheelRpm) {
         double cosHeading = Math.cos(robotHeading);
         double sinHeading = Math.sin(robotHeading);
 
@@ -84,7 +86,6 @@ public class BasicShooterCalculator implements ShooterCalculator {
 
         // Direct polynomial outputs from distance
 
-
         double distanceM = distance * INCH_TO_METER;
         int targetRpm = (int) Math.round(flywheelRpmModel.evaluate(distanceM) * MPS_TO_RPM);
         double hoodAngleDeg = hoodAngleModel.evaluate(distanceM);
@@ -100,9 +101,7 @@ public class BasicShooterCalculator implements ShooterCalculator {
         double radialVelocity = robotVelocityX * dirX + robotVelocityY * dirY;
 
         // Small angular lead compensation based on lateral motion relative to distance
-        double angularLeadRad = (distance > 1e-6)
-                ? Math.atan2(-crossVelocity * 0.15, Math.max(distance, 0.25))
-                : 0.0;
+        double angularLeadRad = (distance > 1e-6) ? Math.atan2(-crossVelocity * 0.15, Math.max(distance, 0.25)) : 0.0;
 
         // Slight RPM adjustment for radial approach/recession
         int compensatedRpm = (int) Math.round(targetRpm - radialVelocity * 25.0);
@@ -114,12 +113,7 @@ public class BasicShooterCalculator implements ShooterCalculator {
         boolean isHoodAngleReachable = isHoodAngleValid(hoodAngleDeg);
         OpModeManager.getTelemetry().addData("isHoodAngleValid", isHoodAngleReachable);
 
-        return new ShooterSolution(
-                compensatedRpm,
-                finalTurretDegrees,
-                hoodAngleDeg,
-                isHoodAngleReachable
-        );
+        return new ShooterSolution(compensatedRpm, finalTurretDegrees, hoodAngleDeg, isHoodAngleReachable);
     }
 
     // ------------------------------------------------------------------
@@ -139,8 +133,8 @@ public class BasicShooterCalculator implements ShooterCalculator {
         return hoodAngleDegrees >= minHoodAngleDeg && hoodAngleDegrees <= maxHoodAngleDeg;
     }
 
-    public double calculateTurretAngleDegrees(double robotX, double robotY, double robotHeading,
-                                              double goalX, double goalY) {
+    public double calculateTurretAngleDegrees(
+            double robotX, double robotY, double robotHeading, double goalX, double goalY) {
         double cosHeading = Math.cos(robotHeading);
         double sinHeading = Math.sin(robotHeading);
 

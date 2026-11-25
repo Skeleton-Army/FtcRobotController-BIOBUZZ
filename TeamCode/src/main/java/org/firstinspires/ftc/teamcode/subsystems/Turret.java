@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.teamcode.config.TurretConfig.*;
-
 import com.pedropathing.math.Pose;
 import com.pedropathing.utils.Angle;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -14,11 +12,13 @@ import com.skeletonarmy.marrow.TimerEx;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.config.interfaces.TurretConfig;
 import org.firstinspires.ftc.teamcode.utils.MathUtilities;
 
 public class Turret extends SubsystemBase {
     private final MotorEx turret;
     private final PIDController turretPID;
+    private final TurretConfig config;
     private boolean disabled = false;
     private double lastWrappedTarget = 0;
     private boolean hasWrappedTarget = false;
@@ -34,15 +34,16 @@ public class Turret extends SubsystemBase {
     private Pose targetPose;
     private final Supplier<Pose> poseSupplier;
 
-    public Turret(final HardwareMap hardwareMap, final Supplier<Pose> poseSupplier) {
+    public Turret(final HardwareMap hardwareMap, TurretConfig turretConfig, final Supplier<Pose> poseSupplier) {
         super();
-        turret = new MotorEx(hardwareMap, TURRET_NAME, TURRET_MOTOR);
+        config = turretConfig;
+        turret = new MotorEx(hardwareMap, config.getTurretName(), config.getTurretMotor());
         turret.setRunMode(MotorEx.RunMode.RawPower);
         turret.setZeroPowerBehavior(MotorEx.ZeroPowerBehavior.BRAKE);
-        turret.setDistancePerPulse((Math.PI * 2) / (turret.getCPR() * GEAR_RATIO));
+        turret.setDistancePerPulse((Math.PI * 2) / (turret.getCPR() * config.getGearRatio()));
 
-        turretPID = new PIDController(TURRET_KP, TURRET_KI, TURRET_KD);
-        turretPID.setTolerance(TURRET_POSITION_TOLERANCE, TURRET_VELOCITY_TOLERANCE);
+        turretPID = new PIDController(config.getTurretKp(), config.getTurretKi(), config.getTurretKd());
+        turretPID.setTolerance(config.getTurretPositionTolerance(), config.getTurretVelocityTolerance());
 
         this.poseSupplier = poseSupplier;
         targetPose = Pose.zero();
@@ -130,24 +131,25 @@ public class Turret extends SubsystemBase {
     }
 
     private boolean shouldSkipUpdate(double dt) {
-        return dt <= MIN_UPDATE_DT || startupTimer.getElapsed() < STARTUP_SETTLE_TIME;
+        return dt <= config.getMinUpdateDt() || startupTimer.getElapsed() < config.getStartupSettleTime();
     }
 
     private double computeRawTargetVel(double currentTargetAngle, double dt) {
         double deltaAngle = Angle.normalizeSigned(currentTargetAngle - lastTargetAngle);
         double rawVel = deltaAngle / dt;
-        return MathUtils.clamp(rawVel, -MAX_TARGET_VEL, MAX_TARGET_VEL);
+        return MathUtils.clamp(rawVel, -config.getMaxTargetVel(), config.getMaxTargetVel());
     }
 
     private double computeRawTargetAccel(double rawTargetVel, double dt) {
         double rawAccel = (rawTargetVel - targetVel) / dt;
-        return MathUtils.clamp(rawAccel, -MAX_TARGET_ACCEL, MAX_TARGET_ACCEL);
+        return MathUtils.clamp(rawAccel, -config.getMaxTargetAccel(), config.getMaxTargetAccel());
     }
 
     private void updateFilteredKinematics(double rawTargetVel, double rawTargetAccel) {
-        filteredTargetVel = MathUtilities.lowPassFilter(rawTargetVel, filteredTargetVel, TURRET_DERIVATIVE_GAIN);
-        filteredTargetAccel =
-                MathUtilities.lowPassFilter(rawTargetAccel, filteredTargetAccel, TURRET_SECOND_DERIVATIVE_GAIN);
+        filteredTargetVel =
+                MathUtilities.lowPassFilter(rawTargetVel, filteredTargetVel, config.getTurretDerivativeGain());
+        filteredTargetAccel = MathUtilities.lowPassFilter(
+                rawTargetAccel, filteredTargetAccel, config.getTurretSecondDerivativeGain());
     }
 
     private double[] computeNetMotion() {
@@ -227,7 +229,7 @@ public class Turret extends SubsystemBase {
         double pid = turretPID.calculate(measuredPos);
         double error = turretPID.getPositionError();
 
-        if (Math.abs(error) > TURRET_IZONE) {
+        if (Math.abs(error) > config.getTurretIzone()) {
             turretPID.clearTotalError();
         }
 
@@ -235,12 +237,12 @@ public class Turret extends SubsystemBase {
     }
 
     private double computeFeedforward(double netVel, double netAccel) {
-        return (netVel * TURRET_KV) + (netAccel * TURRET_KA);
+        return (netVel * config.getTurretKv()) + (netAccel * config.getTurretKa());
     }
 
     private double computeStaticComp(double totalRequest) {
-        if (Math.abs(totalRequest) >= TURRET_MIN_VOLTAGE) {
-            return (totalRequest > 0) ? TURRET_KS : -TURRET_KS;
+        if (Math.abs(totalRequest) >= config.getTurretMinVoltage()) {
+            return (totalRequest > 0) ? config.getTurretKs() : -config.getTurretKs();
         }
         return 0;
     }
@@ -251,8 +253,12 @@ public class Turret extends SubsystemBase {
 
     private double calculateTargetAngle(Pose targetPose, Pose robotPose) {
         double heading = robotPose.heading();
-        double turretX = robotPose.x() + TURRET_OFFSET_X * Math.cos(heading) - TURRET_OFFSET_Y * Math.sin(heading);
-        double turretY = robotPose.y() + TURRET_OFFSET_X * Math.sin(heading) + TURRET_OFFSET_Y * Math.cos(heading);
+        double turretX = robotPose.x()
+                + config.getTurretOffsetX() * Math.cos(heading)
+                - config.getTurretOffsetY() * Math.sin(heading);
+        double turretY = robotPose.y()
+                + config.getTurretOffsetX() * Math.sin(heading)
+                + config.getTurretOffsetY() * Math.cos(heading);
 
         double fieldAngle = Math.atan2(targetPose.y() - turretY, targetPose.x() - turretX);
         return Angle.normalizeSigned(fieldAngle - heading);
@@ -261,7 +267,8 @@ public class Turret extends SubsystemBase {
     private void setTargetAngle(double targetAngleRad) {
         double lastCmd = hasWrappedTarget ? lastWrappedTarget : getAngle();
 
-        double wrapped = wrapToTarget(lastCmd, targetAngleRad, TURRET_MIN, TURRET_MAX, TURRET_WRAP, lastCmd);
+        double wrapped = wrapToTarget(
+                lastCmd, targetAngleRad, config.getTurretMin(), config.getTurretMax(), config.isTurretWrap(), lastCmd);
 
         lastWrappedTarget = wrapped;
         hasWrappedTarget = true;
@@ -270,16 +277,16 @@ public class Turret extends SubsystemBase {
     }
 
     private boolean isTurretDamaged() {
-        boolean motorTryingToMove = Math.abs(turret.getRawPower()) > STALL_MIN_POWER;
+        boolean motorTryingToMove = Math.abs(turret.getRawPower()) > config.getStallMinPower();
 
-        boolean turretNotMoving = Math.abs(turret.getVelocity()) < STALL_MIN_VELOCITY;
+        boolean turretNotMoving = Math.abs(turret.getVelocity()) < config.getStallMinVelocity();
 
         boolean isStalling = motorTryingToMove && turretNotMoving;
 
         if (isStalling) {
             stallTimer.start();
 
-            if (stallTimer.getElapsed() > TRAVEL_TIME_THRESHOLD) {
+            if (stallTimer.getElapsed() > config.getTravelTimeThreshold()) {
                 RobotLog.addGlobalWarningMessage("TURRET STALL DETECTED.");
                 return true;
             }

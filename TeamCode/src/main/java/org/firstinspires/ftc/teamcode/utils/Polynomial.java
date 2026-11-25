@@ -1,13 +1,11 @@
-package org.firstinspires.ftc.teamcode.utilities;
-
-import com.skeletonarmy.marrow.OpModeManager;
+package org.firstinspires.ftc.teamcode.utils;
 
 import java.util.Arrays;
 
 /**
  * Mathematical helper class representing a single-variable polynomial function.
  * Stores polynomial coefficients and provides an evaluation method using Horner's scheme.
- * 
+ *
  * Polynomial format: f(x) = c_0 + c_1 * x + c_2 * x^2 + ... + c_n * x^n
  */
 public class Polynomial {
@@ -20,7 +18,7 @@ public class Polynomial {
      */
     public Polynomial(double... coefficients) {
         if (coefficients == null || coefficients.length == 0) {
-            this.coefficients = new double[]{0.0};
+            this.coefficients = new double[] {0.0};
         } else {
             this.coefficients = Arrays.copyOf(coefficients, coefficients.length);
         }
