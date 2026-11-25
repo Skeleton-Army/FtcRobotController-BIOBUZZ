@@ -59,11 +59,7 @@ public class BasicShooterCalculator implements ShooterCalculator {
 
     @Override
     public ShooterSolution calculate(
-            Pose robotPose,
-            Pose goalPose,
-            double robotVelocityX,
-            double robotVelocityY,
-            double currentFlywheelRpm) {
+            Pose robotPose, Pose goalPose, double robotVelocityX, double robotVelocityY, double currentFlywheelRpm) {
         double cosHeading = Math.cos(robotPose.heading());
         double sinHeading = Math.sin(robotPose.heading());
 

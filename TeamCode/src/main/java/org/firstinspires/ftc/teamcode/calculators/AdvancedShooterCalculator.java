@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.calculators;
 
 import com.pedropathing.math.Pose;
-
 import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
 import org.firstinspires.ftc.teamcode.config.interfaces.ShooterConfig;
 import org.firstinspires.ftc.teamcode.utils.Polynomial;
@@ -108,11 +107,7 @@ public class AdvancedShooterCalculator implements ShooterCalculator {
      */
     @Override
     public ShooterSolution calculate(
-            Pose robotPose,
-            Pose goalPose,
-            double robotVelocityX,
-            double robotVelocityY,
-            double currentFlywheelRpm) {
+            Pose robotPose, Pose goalPose, double robotVelocityX, double robotVelocityY, double currentFlywheelRpm) {
         // Calculate turret pivot field position and distance/angle to goal
         double cosHeading = Math.cos(robotPose.heading());
         double sinHeading = Math.sin(robotPose.heading());

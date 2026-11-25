@@ -210,6 +210,6 @@ public class Flywheel extends SubsystemBase {
     }
 
     public boolean isReadyToShoot() {
-        return Math.abs(getTargetRPM() - getRPM()) >= config.getRpmReachedThreshold();
+        return Math.abs(getTargetRPM() - getRPM()) <= config.getRpmReachedThreshold();
     }
 }

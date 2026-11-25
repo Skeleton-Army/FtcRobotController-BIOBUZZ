@@ -99,7 +99,7 @@ public class Turret extends SubsystemBase {
     }
 
     public void home() {
-        //TODO: implement
+        // TODO: implement
     }
 
     public double[] getNetTargetKinematics() {
@@ -308,5 +308,4 @@ public class Turret extends SubsystemBase {
     public void setTargetPose(Pose target) {
         targetPose = target;
     }
-
 }

@@ -5,7 +5,6 @@ import com.pedropathing.math.Velocity;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import java.util.function.Supplier;
-
 import org.firstinspires.ftc.teamcode.calculators.ShooterCalculator;
 import org.firstinspires.ftc.teamcode.calculators.ShooterSolution;
 import org.firstinspires.ftc.teamcode.config.interfaces.ShooterConfig;
@@ -21,7 +20,12 @@ public class Shooter extends SubsystemBase {
     private ShooterSolution solution;
     private final ShooterCalculator calculator;
 
-    public Shooter(final HardwareMap hardwareMap, final Supplier<Pose> poseSupplier, Supplier<Velocity> velocitySupplier, ShooterConfig shooterConfig, ShooterCalculator shooterCalculator) {
+    public Shooter(
+            final HardwareMap hardwareMap,
+            final Supplier<Pose> poseSupplier,
+            Supplier<Velocity> velocitySupplier,
+            ShooterConfig shooterConfig,
+            ShooterCalculator shooterCalculator) {
         super();
         config = shooterConfig;
         calculator = shooterCalculator;
@@ -99,7 +103,7 @@ public class Shooter extends SubsystemBase {
 
         flywheel.setRPM(solution.getFlywheelRPM());
         hood.setVerticalAngle(Math.toRadians(solution.getHoodAngleDegrees()));
-        // why solution also turret?
+        // What to with the turret angle from solution?
     }
 
     public void updateTargetingByDistance(double distance) {
@@ -115,7 +119,6 @@ public class Shooter extends SubsystemBase {
             return;
         }
 
-
         Velocity velocity = velocitySupplier.get();
         if (velocity != null) {
             vx = velocity.vx;
@@ -127,12 +130,7 @@ public class Shooter extends SubsystemBase {
         double currentFlywheelRpm = flywheel.getRPM();
         Pose goalPose = new Pose(goalX, goalY);
 
-        ShooterSolution solution = calculator.calculate(
-                pose,
-                goalPose,
-                vx, vy,
-                currentFlywheelRpm
-        );
+        ShooterSolution solution = calculator.calculate(pose, goalPose, vx, vy, currentFlywheelRpm);
         applySolution(solution);
     }
 
@@ -148,12 +146,7 @@ public class Shooter extends SubsystemBase {
             double vy = velocity != null ? velocity.vy : 0.0;
             double currentFlywheelRpm = flywheel.getRPM();
 
-            ShooterSolution solution = calculator.calculate(
-                    currentPose,
-                    targetPose,
-                    vx, vy,
-                    currentFlywheelRpm
-            );
+            ShooterSolution solution = calculator.calculate(currentPose, targetPose, vx, vy, currentFlywheelRpm);
             applySolution(solution);
         }
     }

@@ -67,7 +67,7 @@ public class Hood extends SubsystemBase {
     }
 
     public boolean isAtTarget() {
-        return false; //TODO: actually calculate
+        return false; // TODO: actually calculate
     }
 
     public void home() {

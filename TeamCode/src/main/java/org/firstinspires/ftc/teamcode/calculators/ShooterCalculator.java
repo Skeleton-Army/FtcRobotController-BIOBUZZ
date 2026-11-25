@@ -15,9 +15,5 @@ public interface ShooterCalculator {
      * @return Calculated {@link ShooterSolution} holding RPM, turret angle, and hood angle
      */
     ShooterSolution calculate(
-            Pose robotPose,
-            Pose goalPose,
-            double robotVelocityX,
-            double robotVelocityY,
-            double currentFlywheelRpm);
+            Pose robotPose, Pose goalPose, double robotVelocityX, double robotVelocityY, double currentFlywheelRpm);
 }

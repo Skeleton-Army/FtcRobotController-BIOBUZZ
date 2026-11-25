@@ -74,6 +74,6 @@ public class PollenHoodConfig implements HoodConfig {
 
     @Override
     public Polynomial getModel() {
-        return null;
+        return rpmModel;
     }
 }
