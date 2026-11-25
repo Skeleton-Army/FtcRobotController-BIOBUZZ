@@ -98,6 +98,10 @@ public class Turret extends SubsystemBase {
         disabled = false;
     }
 
+    public void home() {
+        //TODO: implement
+    }
+
     public double[] getNetTargetKinematics() {
         long currentTime = System.nanoTime();
         double currentTargetAngle = turretPID.getSetPoint();
@@ -304,4 +308,5 @@ public class Turret extends SubsystemBase {
     public void setTargetPose(Pose target) {
         targetPose = target;
     }
+
 }

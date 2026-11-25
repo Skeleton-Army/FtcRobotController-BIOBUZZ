@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.calculators;
 
+import com.pedropathing.math.Pose;
+
 import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
 import org.firstinspires.ftc.teamcode.config.interfaces.ShooterConfig;
 import org.firstinspires.ftc.teamcode.utils.Polynomial;
@@ -97,11 +99,8 @@ public class AdvancedShooterCalculator implements ShooterCalculator {
     /**
      * Calculates the shot solution for a robot, compensating for robot velocity and current flywheel state.
      *
-     * @param robotX             Robot X on the field (m)
-     * @param robotY             Robot Y on the field (m)
-     * @param robotHeading       Robot heading (radians)
-     * @param goalX              Goal X on the field (m)
-     * @param goalY              Goal Y on the field (m)
+     * @param robotPose          Robot Pose on the field (m)
+     * @param goalPose           Goal Pose on the field (m)
      * @param robotVelocityX     Robot field-frame velocity X (m/s)
      * @param robotVelocityY     Robot field-frame velocity Y (m/s)
      * @param currentFlywheelRpm Current measured flywheel RPM
@@ -109,23 +108,20 @@ public class AdvancedShooterCalculator implements ShooterCalculator {
      */
     @Override
     public ShooterSolution calculate(
-            double robotX,
-            double robotY,
-            double robotHeading,
-            double goalX,
-            double goalY,
+            Pose robotPose,
+            Pose goalPose,
             double robotVelocityX,
             double robotVelocityY,
             double currentFlywheelRpm) {
         // Calculate turret pivot field position and distance/angle to goal
-        double cosHeading = Math.cos(robotHeading);
-        double sinHeading = Math.sin(robotHeading);
+        double cosHeading = Math.cos(robotPose.heading());
+        double sinHeading = Math.sin(robotPose.heading());
 
-        double turretX = robotX + turretOffsetForward * cosHeading - turretOffsetLeft * sinHeading;
-        double turretY = robotY + turretOffsetForward * sinHeading + turretOffsetLeft * cosHeading;
+        double turretX = robotPose.x() + turretOffsetForward * cosHeading - turretOffsetLeft * sinHeading;
+        double turretY = robotPose.y() + turretOffsetForward * sinHeading + turretOffsetLeft * cosHeading;
 
-        double dx = goalX - turretX;
-        double dy = goalY - turretY;
+        double dx = goalPose.x() - turretX;
+        double dy = goalPose.y() - turretY;
         double distance = Math.hypot(dx, dy);
         double angleToGoal = Math.atan2(dy, dx);
 
@@ -147,7 +143,7 @@ public class AdvancedShooterCalculator implements ShooterCalculator {
 
         // Vector direction to aim so that (launch - robot motion) hits the goal
         Vector3D aimVector = actualLaunch.subtract(robotVelocity);
-        double aimTurretAngle = aimVector.getAlpha() - robotHeading; // relative to robot heading
+        double aimTurretAngle = aimVector.getAlpha() - robotPose.heading(); // relative to robot heading
         double aimHorizontalSpeed = Math.hypot(aimVector.getX(), aimVector.getY());
         double aimHoodAngle = Math.atan2(aimVector.getZ(), aimHorizontalSpeed);
 

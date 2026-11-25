@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.calculators;
 
+import com.pedropathing.math.Pose;
+
 /**
  * Interface defining calculation strategies for shooter target solutions.
  * Provides abstract calculation signatures for mapping spatial inputs (e.g. distance, orientation)
@@ -13,11 +15,8 @@ public interface ShooterCalculator {
      * @return Calculated {@link ShooterSolution} holding RPM, turret angle, and hood angle
      */
     ShooterSolution calculate(
-            double robotX,
-            double robotY,
-            double robotHeading,
-            double goalX,
-            double goalY,
+            Pose robotPose,
+            Pose goalPose,
             double robotVelocityX,
             double robotVelocityY,
             double currentFlywheelRpm);

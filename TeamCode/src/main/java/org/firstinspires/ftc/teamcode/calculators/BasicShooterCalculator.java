@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.calculators;
 
+import com.pedropathing.math.Pose;
 import com.skeletonarmy.marrow.OpModeManager;
 import org.firstinspires.ftc.teamcode.config.interfaces.ShooterConfig;
 import org.firstinspires.ftc.teamcode.utils.Polynomial;
@@ -58,27 +59,24 @@ public class BasicShooterCalculator implements ShooterCalculator {
 
     @Override
     public ShooterSolution calculate(
-            double robotX,
-            double robotY,
-            double robotHeading,
-            double goalX,
-            double goalY,
+            Pose robotPose,
+            Pose goalPose,
             double robotVelocityX,
             double robotVelocityY,
             double currentFlywheelRpm) {
-        double cosHeading = Math.cos(robotHeading);
-        double sinHeading = Math.sin(robotHeading);
+        double cosHeading = Math.cos(robotPose.heading());
+        double sinHeading = Math.sin(robotPose.heading());
 
         // Turret pivot position in field coordinates
-        double turretX = robotX + turretOffsetForward * cosHeading - turretOffsetLeft * sinHeading;
-        double turretY = robotY + turretOffsetForward * sinHeading + turretOffsetLeft * cosHeading;
+        double turretX = robotPose.x() + turretOffsetForward * cosHeading - turretOffsetLeft * sinHeading;
+        double turretY = robotPose.y() + turretOffsetForward * sinHeading + turretOffsetLeft * cosHeading;
 
-        double dx = goalX - turretX;
-        double dy = goalY - turretY;
+        double dx = goalPose.x() - turretX;
+        double dy = goalPose.y() - turretY;
         double distance = Math.hypot(dx, dy);
 
-        OpModeManager.getTelemetry().addData("goal x", goalX);
-        OpModeManager.getTelemetry().addData("goal y", goalY);
+        OpModeManager.getTelemetry().addData("goal x", goalPose.x());
+        OpModeManager.getTelemetry().addData("goal y", goalPose.y());
         OpModeManager.getTelemetry().addData("turret x", turretX);
         OpModeManager.getTelemetry().addData("turret y", turretY);
         OpModeManager.getTelemetry().addData("distance", distance);
@@ -92,8 +90,8 @@ public class BasicShooterCalculator implements ShooterCalculator {
 
         // Project robot velocity onto axes perpendicular and parallel to the goal line
         // to adjust turret lead angle without requiring an exit speed variable
-        double dirX = distance > 1e-6 ? dx / distance : Math.cos(robotHeading);
-        double dirY = distance > 1e-6 ? dy / distance : Math.sin(robotHeading);
+        double dirX = distance > 1e-6 ? dx / distance : cosHeading;
+        double dirY = distance > 1e-6 ? dy / distance : sinHeading;
         double perpX = -dirY;
         double perpY = dirX;
 
@@ -106,7 +104,7 @@ public class BasicShooterCalculator implements ShooterCalculator {
         // Slight RPM adjustment for radial approach/recession
         int compensatedRpm = (int) Math.round(targetRpm - radialVelocity * 25.0);
 
-        double relativeTurretRad = normalizeAngle((fieldAngleToGoal + angularLeadRad) - robotHeading);
+        double relativeTurretRad = normalizeAngle((fieldAngleToGoal + angularLeadRad) - robotPose.heading());
         double finalTurretDegrees = Math.toDegrees(relativeTurretRad);
         OpModeManager.getTelemetry().addData("hood Angle (calc)", hoodAngleDeg);
         // Keep physical hood bounds check

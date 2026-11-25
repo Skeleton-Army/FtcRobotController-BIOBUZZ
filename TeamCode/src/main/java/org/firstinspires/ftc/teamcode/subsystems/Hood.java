@@ -65,4 +65,12 @@ public class Hood extends SubsystemBase {
 
         hood.set(targetPos);
     }
+
+    public boolean isAtTarget() {
+        return false; //TODO: actually calculate
+    }
+
+    public void home() {
+        hood.set(config.getHoodMin());
+    }
 }

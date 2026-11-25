@@ -208,4 +208,8 @@ public class Flywheel extends SubsystemBase {
         double motorTPS = flywheel.getCorrectedVelocity();
         return (motorTPS * SECONDS_PER_MINUTE) / flywheel.getCPR();
     }
+
+    public boolean isReadyToShoot() {
+        return Math.abs(getTargetRPM() - getRPM()) >= config.getRpmReachedThreshold();
+    }
 }
