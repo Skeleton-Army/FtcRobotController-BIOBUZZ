@@ -141,6 +141,10 @@ public class SysIdRoutine extends CommandOpMode {
 
         // ---- acceleration: start low, step up ----
         ACCEL_TEST_5_TO_10V("accel_test_5_to_10v", "accel test", 5, true, true, 10),
+        ACCEL_TEST_7_TO_12("accel_test_7_to_12", "accel test", 7, true, true, 12),
+        ACCEL_TEST_4_8("accel_test_4_8", "accel test", 4, true, true, 8),
+        ACCEL_OPT_7_10("accel_opt_7_10", "accel opt", 7, true, true, 10),
+        ACCEL_OPT_5_12("accel_opt_7_10", "accel_opt", 5, true, true, 12),
 
         // ---- held-out validation ----
         VAL_7V("val_7v", "validation", true, 7.0),
