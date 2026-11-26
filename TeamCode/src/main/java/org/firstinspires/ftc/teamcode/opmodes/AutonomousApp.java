@@ -89,9 +89,9 @@ public class AutonomousApp extends CommandOpMode {
                         new WaitCommand(2000),
 
                         new FollowPathCommand(follower, collectPath),
-                        //new InstantCommand(intake::startTransfer),
-                        //pulseIntake(4),
-                        //new InstantCommand(intake::stopTransfer),
+                        new InstantCommand(intake::startTransfer),
+                        pulseIntake(4),
+                        new InstantCommand(intake::stopTransfer),
 
                         new FollowPathCommand(follower, scorePathFar),
                         new InstantCommand(), // shoot
