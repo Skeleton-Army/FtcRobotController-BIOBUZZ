@@ -35,10 +35,10 @@ public class TeleOpApp extends CommandOpMode {
     private final int minThreshold = 150;
     private boolean currentButtonB;
 
-    private final Pose flowerRedGarden = new Pose(13, 46, Math.toRadians(180));
-    private final Pose flowerRedParking = new Pose(45, 124, Math.toRadians(90));
-    private final Pose flowerBlueGarden = new Pose(124, 95, Math.toRadians(0));
-    private final Pose flowerBlueParking = new Pose(93, 12, Math.toRadians(-90));
+    private final Pose flowerRedGarden = new Pose(15, 46, Math.toRadians(180));
+    private final Pose flowerRedParking = new Pose(43, 124, Math.toRadians(90));
+    private final Pose flowerBlueGarden = new Pose(123, 94, Math.toRadians(0));
+    private final Pose flowerBlueParking = new Pose(93, 14, Math.toRadians(-90));
 
     private Pose calculateClosestFlower(){
         double robotX = follower.pose().x();
@@ -93,8 +93,9 @@ public class TeleOpApp extends CommandOpMode {
             halfRobotLength = halfRobotLength;
         }
         else {
+            double temp = halfRobotWidth;
             halfRobotWidth = halfRobotLength;
-            halfRobotLength = halfRobotWidth;
+            halfRobotLength = temp;
         }
 
         boolean wallLeft = false;
