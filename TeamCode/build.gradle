@@ -63,6 +63,7 @@ dependencies {
     implementation "org.psilynx.psikit:ftc:0.2.0"
 
     implementation "org.apache.commons:commons-csv:1.14.1"
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
 
 tasks.register('adbDisconnect', Exec) {

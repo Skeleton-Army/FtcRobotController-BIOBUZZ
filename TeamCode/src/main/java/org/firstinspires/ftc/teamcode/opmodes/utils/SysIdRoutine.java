@@ -1,9 +1,12 @@
 package org.firstinspires.ftc.teamcode.opmodes.utils;
 
 import android.annotation.SuppressLint;
+import android.util.Log;
+import android.util.Pair;
 
 import androidx.annotation.NonNull;
 
+import com.pedropathing.localization.FusionLocalizer;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Utility;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -18,6 +21,7 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.hardware.motors.Motor;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.skeletonarmy.marrow.LynxUtil;
+import com.skeletonarmy.marrow.prompts.BooleanPrompt;
 import com.skeletonarmy.marrow.prompts.OptionPrompt;
 import com.skeletonarmy.marrow.prompts.Prompter;
 import java.io.File;
@@ -26,8 +30,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+
+import okhttp3.HttpUrl;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 /**
  * Flywheel system identification (position-based step-response tests for kS / kV / kA).
@@ -93,6 +106,7 @@ public class SysIdRoutine extends CommandOpMode {
     private static final double VOLTAGE_REFRESH_S = 0.1; // how often to re-read battery voltage (slow call)
     private static final double TELEMETRY_PERIOD_S = 0.25; // telemetry is throttled during a run
     private static final String SAVE_DIR = "/sdcard/FIRST/sysid/";
+    private static final HttpUrl SERVER = HttpUrl.parse("http://192.168.43.40:3923/?pw=wark");
 
     /** Test runs. Adjust the voltages if the low level does not move reliably or you need a wider speed range. */
     private enum Run {
@@ -208,6 +222,11 @@ public class SysIdRoutine extends CommandOpMode {
         prompter = new Prompter(this);
         prompter.prompt("run", new OptionPrompt<>("Select Run", Run.values()))
                 .label("Run")
+                .prompt("upload", new BooleanPrompt("Upload log to HTTP server: " + SERVER.host(), true))
+                .label("Upload to server")
+                .prompt("remove", new BooleanPrompt("Delete file on bot after test", false))
+                .label("Remove file after test")
+                .showIf("upload", true)
                 .showSummary()
                 .onComplete(() -> {
                     selectedRun = prompter.get("run");
@@ -556,7 +575,30 @@ public class SysIdRoutine extends CommandOpMode {
                 status = timedOut
                         ? "Did not settle within MAX_SPINUP_S - raise it and repeat (saving anyway)"
                         : "Test complete";
-                saveData(records);
+
+                File file = saveData(records);
+                if (!file.exists()) {
+                    return;
+                }
+
+                Pair<Integer, String> res = null;
+
+                if (prompter.get("upload")) {
+                    res = uploadFile(file);
+                    if (res != null) {
+                        updateStatusFromResponse(res);
+                    }
+                }
+
+                if (prompter.getOrDefault("remove", false)) {
+                    if (res != null) {
+                        if (res.first < 0 || (res.first >= 200 && res.first <= 299)) {
+                            file.delete();
+                        } else {
+                            status = status + "\nSkipping file deletion due to failed upload";
+                        }
+                    }
+                }
             }
         }
     }
@@ -564,7 +606,7 @@ public class SysIdRoutine extends CommandOpMode {
     // ======================= SAVING =======================
 
     @SuppressLint("SdCardPath")
-    private void saveData(List<double[]> records) {
+    private File saveData(List<double[]> records) {
         File dir = new File(SAVE_DIR);
         dir.mkdirs();
         File file = new File(dir, "sysid_" + selectedRun.id + "_" + System.currentTimeMillis() + ".csv");
@@ -589,6 +631,34 @@ public class SysIdRoutine extends CommandOpMode {
             status += " | Saved " + file.getName() + " (" + records.size() + " samples)";
         } catch (IOException e) {
             status = "SAVE FAILED: " + e.getMessage();
+        }
+
+        return file;
+    }
+
+    private Pair<Integer, String> uploadFile(File file) {
+        OkHttpClient client = new OkHttpClient();
+        RequestBody requestBody = RequestBody.create(file, MediaType.get("text/csv"));
+        Request request = new Request.Builder()
+                .url(SERVER.newBuilder().addPathSegment(file.getName()).build())
+                .put(requestBody)
+                .build();
+
+        try(Response response = client.newCall(request).execute()){
+            return new Pair<>(response.code(), response.body().string());
+        } catch (IOException e) {
+            Log.e("SysID", "Upload to server failed", e);
+        }
+
+        return null;
+    }
+
+    private void updateStatusFromResponse(Pair<Integer, String> pair) {
+        if (pair.first >= 200 && pair.first <= 299) {
+            status = status + "\nUpload successful";
+        } else {
+            status = status + "Uploaded exited with error code" + pair.first;
+            Log.e("SysID", "Upload failed: " + pair.second);
         }
     }
 }
