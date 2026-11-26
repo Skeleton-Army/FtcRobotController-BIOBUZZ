@@ -24,8 +24,8 @@ public class TeleOpApp extends CommandOpMode {
     private Follower follower;
     private Intake intake;
     private GamepadEx gamepad;
-    private double halfRobotWidth = 17.785 / 2;
-    private double halfRobotLength = 17.323 / 2;
+    private double halfRobotWidth = 17.785 / 2; //intake - new robot is 405 and 412 (yet to be checked which one is which)
+    private double halfRobotLength = 17.323 / 2; //side
     private final Pose startPose = new Pose(halfRobotWidth, halfRobotLength, Math.toRadians(0));
     private boolean previousButtonB = false;
     private long lastPressButtonB = 0;
