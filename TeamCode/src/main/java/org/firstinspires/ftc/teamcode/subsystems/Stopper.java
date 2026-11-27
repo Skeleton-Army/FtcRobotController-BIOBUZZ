@@ -10,7 +10,6 @@ import com.seattlesolvers.solverslib.hardware.servos.ServoEx;
 
 public class Stopper extends SubsystemBase {
     private final ServoEx stopper;
-    private boolean isBlocking;
     public Stopper(HardwareMap hardwareMap) {
         stopper = new ServoEx(hardwareMap, STOPPER_NAME);
         block();
